@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PDF → รูปภาพ</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#273449;
+    --line:#334155; --text:#e2e8f0; --muted:#94a3b8;
+    --accent:#6366f1; --accent2:#818cf8; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI","Sarabun","Noto Sans Thai",sans-serif;
+    padding:0 0 24px;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:rgba(15,23,42,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+    padding:12px 16px; padding-top:max(12px, env(safe-area-inset-top));
+  }
+  header .top{display:flex; align-items:center; gap:10px}
+  header h1{margin:0; font-size:19px; display:flex; align-items:center; gap:8px; flex:1}
+  header p{margin:4px 0 0; font-size:12px; color:var(--muted)}
+  header a.back{font-size:13px; color:var(--accent2); text-decoration:none; white-space:nowrap; padding:6px 8px; border-radius:8px}
+  header a.back:active{background:var(--card2)}
+  .wrap{max-width:680px; margin:0 auto; padding:16px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px}
+  label.fld{display:block; font-size:13px; color:var(--muted); margin:0 0 8px}
+  select, input[type=range]{width:100%}
+  select{
+    background:var(--card2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:11px 12px; font-size:15px; appearance:none;
+  }
+  .row{display:flex; gap:12px}
+  .row>div{flex:1; min-width:0}
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; border:0; border-radius:14px; padding:15px; font-size:16px;
+    font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .btn-add{background:var(--card2); color:var(--text); border:1px dashed var(--line)}
+  .btn-add:active{background:var(--line)}
+  .btn-go{background:var(--ok); color:#04210f; box-shadow:0 6px 20px rgba(34,197,94,.30)}
+  .btn-go:disabled{opacity:.4; box-shadow:none; cursor:default}
+  .btn-go:active:not(:disabled){filter:brightness(.94)}
+  .qual{display:flex; align-items:center; gap:10px}
+  .qual b{min-width:46px; text-align:right; font-variant-numeric:tabular-nums}
+  input[type=range]{accent-color:var(--accent); height:28px}
+  .qwrap.hide{display:none}
+  #fileMeta{font-size:14px; margin-top:10px; color:var(--accent2); min-height:18px}
+  #status{font-size:13px; color:var(--muted); text-align:center; margin:0 0 12px; min-height:18px}
+  #status.ok{color:var(--ok)} #status.err{color:var(--danger)} #status.warn{color:var(--warn)}
+  .prog{height:6px; background:var(--card2); border-radius:999px; overflow:hidden; margin:10px 0 4px; display:none}
+  .prog.show{display:block}
+  .prog i{display:block; height:100%; width:0; background:var(--accent); transition:width .15s}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-top:4px}
+  .thumb{background:var(--card2); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column}
+  .thumb .imgbox{position:relative; aspect-ratio:3/4; background:#0b1220; display:flex; align-items:center; justify-content:center}
+  .thumb .imgbox img{width:100%; height:100%; object-fit:contain; display:block}
+  .thumb .imgbox .ph{color:var(--muted); font-size:12px}
+  .thumb .imgbox .spin{width:22px; height:22px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:sp .8s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .thumb .bar{display:flex; align-items:center; gap:6px; padding:8px 10px; border-top:1px solid var(--line)}
+  .thumb .bar .pg{font-size:12px; color:var(--muted); flex:1; font-variant-numeric:tabular-nums}
+  .dlone{
+    border:0; background:var(--ok); color:#04210f; font-weight:700;
+    width:34px; height:34px; border-radius:9px; font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .dlone:active{filter:brightness(.92)}
+  .dlone:disabled{opacity:.4; cursor:default}
+  .sticky-go{
+    position:sticky; bottom:0; z-index:8; margin:14px -16px -16px;
+    padding:14px 16px; padding-bottom:max(14px, env(safe-area-inset-bottom));
+    background:linear-gradient(180deg, rgba(30,41,59,0), var(--card) 35%);
+    border-top:1px solid var(--line); border-radius:0 0 16px 16px;
+  }
+  .empty{text-align:center; color:var(--muted); font-size:14px; padding:26px 10px}
+  .empty .big{font-size:34px; margin-bottom:8px}
+  .hint{font-size:11px; color:var(--muted); margin-top:8px; line-height:1.5}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>🖼️ PDF → รูปภาพ</h1>
+    <a class="back" href="index.html">← หน้าหลัก</a>
+  </div>
+  <p>🔒 ทำงานในเครื่อง ไม่ส่งไฟล์ขึ้นเน็ต</p>
+</header>
+
+<div class="wrap">
+  <input id="file" type="file" accept="application/pdf" hidden>
+  <button class="btn btn-add" id="pick">📄 เลือกไฟล์ PDF</button>
+  <div id="fileMeta"></div>
+
+  <!-- ตัวเลือกการแปลง -->
+  <div class="card" id="optCard">
+    <div class="row">
+      <div>
+        <label class="fld">รูปแบบไฟล์</label>
+        <select id="fmt">
+          <option value="jpg" selected>JPG (ไฟล์เล็ก)</option>
+          <option value="png">PNG (คมชัด โปร่งใสไม่ได้)</option>
+        </select>
+      </div>
+      <div>
+        <label class="fld">ความละเอียด</label>
+        <select id="scale">
+          <option value="1.5" selected>ปกติ (1.5×)</option>
+          <option value="2">สูง (2×)</option>
+          <option value="3">สูงมาก (3×)</option>
+        </select>
+      </div>
+    </div>
+    <div class="qwrap" id="qwrap" style="margin-top:14px">
+      <label class="fld" id="qLabel">คุณภาพ JPG <b id="qval" style="color:var(--text)">90%</b></label>
+      <div class="qual">
+        <input id="quality" type="range" min="50" max="100" value="90" step="1">
+      </div>
+    </div>
+    <div class="hint">ยิ่งความละเอียดสูง ภาพยิ่งคม แต่ไฟล์ใหญ่ขึ้น • เอกสารสแกนทั่วไปใช้ “ปกติ–สูง” ก็อ่านชัด</div>
+  </div>
+
+  <!-- ผลลัพธ์ -->
+  <div class="card" id="resultCard">
+    <div id="status"></div>
+    <div class="prog" id="prog"><i id="progBar"></i></div>
+
+    <div class="empty" id="empty">
+      <div class="big">🖼️</div>
+      ยังไม่มีไฟล์ — กดปุ่ม “เลือกไฟล์ PDF” ด้านบน
+    </div>
+
+    <div class="grid hidden" id="grid"></div>
+
+    <div class="sticky-go hidden" id="goWrap">
+      <button class="btn btn-go" id="zipAll" disabled>⬇️ ดาวน์โหลดทั้งหมด (ZIP)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vendored, offline. No CDN. -->
+<script src="vendor/extract/pdf.min.js"></script>
+<script src="vendor/extract/jszip.min.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+// ---- pdf.js setup: all assets local & offline ----
+const PDFJS = window.pdfjsLib;
+const VENDOR = "vendor/extract/";
+PDFJS.GlobalWorkerOptions.workerSrc = VENDOR + "pdf.worker.min.js";
+const FONT_OPTS = {
+  standardFontDataUrl: VENDOR + "standard_fonts/",
+  cMapUrl: VENDOR + "cmaps/",
+  cMapPacked: true,
+};
+
+// ---- state ----
+let pdfDoc = null;          // current PDFDocumentProxy
+let pageCount = 0;
+let pages = [];             // [{n, blob, url, rendered, rendering}]
+let pdfName = "document";   // base name (no extension)
+let renderToken = 0;        // cancels stale render loops
+let busy = false;
+
+// ---- small helpers ----
+const fmtSize = b => b < 1024 ? b + " B" : b < 1048576 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(2)+" MB";
+const pad2 = n => String(n).padStart(2, "0");
+function setStatus(msg, cls){ const s=$("#status"); s.textContent=msg||""; s.className = cls||""; }
+function showProg(show){ $("#prog").classList.toggle("show", !!show); }
+function setProg(done, total){ $("#progBar").style.width = total ? Math.round(done/total*100)+"%" : "0%"; }
+function ext(){ return $("#fmt").value === "png" ? "png" : "jpg"; }
+function mime(){ return $("#fmt").value === "png" ? "image/png" : "image/jpeg"; }
+function fileBase(name){ return (name || "document").replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "_").trim() || "document"; }
+
+function triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+// canvas.toBlob promisified (fallback to dataURL on very old engines)
+function canvasToBlob(canvas, type, quality){
+  return new Promise((resolve, reject) => {
+    if (canvas.toBlob) {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error("เข้ารหัสรูปไม่สำเร็จ")), type, quality);
+    } else {
+      try {
+        const url = canvas.toDataURL(type, quality);
+        const bin = atob(url.split(",")[1]); const arr = new Uint8Array(bin.length);
+        for (let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+        resolve(new Blob([arr], { type }));
+      } catch(e){ reject(e); }
+    }
+  });
+}
+
+// ---- reset everything (new file / re-render) ----
+function clearPages(){
+  renderToken++;                       // cancel any in-flight render loop
+  for (const p of pages){ if (p.url) URL.revokeObjectURL(p.url); }
+  pages = [];
+  $("#grid").innerHTML = "";
+}
+function resetAll(){
+  clearPages();
+  if (pdfDoc){ try{ pdfDoc.destroy(); }catch(e){} pdfDoc = null; }
+  pageCount = 0;
+  $("#grid").classList.add("hidden");
+  $("#goWrap").classList.add("hidden");
+  $("#empty").classList.remove("hidden");
+  $("#zipAll").disabled = true;
+  setStatus(""); showProg(false); setProg(0,0);
+}
+
+// ---- pick + load PDF ----
+$("#pick").onclick = () => $("#file").click();
+$("#file").onchange = async (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  await loadPdf(f);
+};
+
+async function loadPdf(file){
+  resetAll();
+  pdfName = fileBase(file.name);
+  $("#fileMeta").textContent = `📄 ${file.name} • ${fmtSize(file.size)}`;
+  setStatus("กำลังเปิดไฟล์…");
+  try {
+    const buf = await file.arrayBuffer();
+    const task = PDFJS.getDocument({ data: new Uint8Array(buf), isEvalSupported: false, ...FONT_OPTS });
+    pdfDoc = await task.promise;
+    pageCount = pdfDoc.numPages;
+
+    $("#empty").classList.add("hidden");
+    $("#grid").classList.remove("hidden");
+    $("#goWrap").classList.remove("hidden");
+    setStatus(`พบทั้งหมด ${pageCount} หน้า — กำลังเรนเดอร์…`);
+
+    buildPlaceholders();
+    await renderAll();                 // lazy-ish sequential render with progress
+  } catch (err) {
+    console.error(err);
+    resetAll();
+    $("#empty").classList.add("hidden");
+    const enc = err && (err.name === "PasswordException");
+    setStatus(enc
+      ? "เปิดไฟล์ไม่ได้ — ไฟล์นี้มีรหัสผ่าน"
+      : "เปิดไฟล์ไม่ได้ — อาจมีรหัสผ่านหรือไฟล์เสีย", "err");
+    // keep grid hidden, show empty hint back
+    $("#empty").classList.remove("hidden");
+  }
+}
+
+// ---- build N placeholder cards up-front (so user sees page count immediately) ----
+function buildPlaceholders(){
+  const grid = $("#grid");
+  grid.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  for (let n = 1; n <= pageCount; n++){
+    pages.push({ n, blob: null, url: null, rendered: false, rendering: false });
+    const card = document.createElement("div");
+    card.className = "thumb";
+    card.dataset.n = n;
+    card.innerHTML =
+      `<div class="imgbox"><div class="spin" aria-label="กำลังเรนเดอร์"></div></div>
+       <div class="bar">
+         <span class="pg">หน้า ${n}/${pageCount}</span>
+         <button class="dlone" data-dl="${n}" disabled title="ดาวน์โหลดหน้านี้">⬇️</button>
+       </div>`;
+    frag.appendChild(card);
+  }
+  grid.appendChild(frag);
+}
+
+// ---- render one page to a Blob at current scale/format ----
+async function renderPage(n){
+  const page = await pdfDoc.getPage(n);
+  const scale = parseFloat($("#scale").value) || 1.5;
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const ctx = canvas.getContext("2d", { alpha: false });
+  // White background — JPEG has no alpha; flatten so scans aren't black.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+
+  const isPng = $("#fmt").value === "png";
+  const q = isPng ? undefined : (parseInt($("#quality").value, 10) || 90) / 100;
+  const blob = await canvasToBlob(canvas, isPng ? "image/png" : "image/jpeg", q);
+  // free the canvas backing store
+  canvas.width = canvas.height = 0;
+  if (page.cleanup) try { page.cleanup(); } catch(e){}
+  return blob;
+}
+
+// ---- sequential render of all pages with live progress + cancellation ----
+async function renderAll(){
+  const token = ++renderToken;
+  busy = true;
+  $("#zipAll").disabled = true;
+  showProg(true); setProg(0, pageCount);
+  let done = 0, failed = 0;
+
+  for (let i = 0; i < pages.length; i++){
+    if (token !== renderToken) return;             // a newer render started — bail
+    const p = pages[i];
+    setStatus(`กำลังเรนเดอร์หน้า ${p.n}/${pageCount}…`);
+    try {
+      const blob = await renderPage(p.n);
+      if (token !== renderToken) return;
+      p.blob = blob;
+      if (p.url) URL.revokeObjectURL(p.url);
+      p.url = URL.createObjectURL(blob);
+      p.rendered = true;
+      paintThumb(p);
+    } catch (err) {
+      console.error("render page " + p.n + " failed:", err);
+      failed++;
+      paintThumbError(p);
+    }
+    done++; setProg(done, pageCount);
+  }
+
+  if (token !== renderToken) return;
+  busy = false;
+  showProg(false);
+  $("#zipAll").disabled = pages.every(p => !p.rendered);
+  if (failed){
+    setStatus(`เรนเดอร์เสร็จ ${pageCount - failed}/${pageCount} หน้า • ${failed} หน้ามีปัญหา`, "warn");
+  } else {
+    setStatus(`✅ พร้อมแล้ว — ${pageCount} หน้า • รูปแบบ ${ext().toUpperCase()}`, "ok");
+  }
+}
+
+// ---- paint a rendered thumbnail into its card ----
+function paintThumb(p){
+  const card = $(`.thumb[data-n="${p.n}"]`);
+  if (!card) return;
+  const box = card.querySelector(".imgbox");
+  box.innerHTML = "";
+  const img = new Image();
+  img.loading = "lazy";
+  img.alt = `หน้า ${p.n}`;
+  img.src = p.url;
+  box.appendChild(img);
+  const dl = card.querySelector(".dlone");
+  if (dl) dl.disabled = false;
+}
+function paintThumbError(p){
+  const card = $(`.thumb[data-n="${p.n}"]`);
+  if (!card) return;
+  card.querySelector(".imgbox").innerHTML = `<div class="ph">หน้านี้เรนเดอร์ไม่ได้</div>`;
+}
+
+// ---- per-page download (event delegation) ----
+$("#grid").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-dl]");
+  if (!btn || btn.disabled) return;
+  const n = parseInt(btn.dataset.dl, 10);
+  const p = pages.find(x => x.n === n);
+  if (!p || !p.blob){ return; }
+  triggerDownload(p.blob, `${pdfName}-page-${pad2(n)}.${ext()}`);
+});
+
+// ---- download ALL as ZIP ----
+$("#zipAll").onclick = async () => {
+  if (busy) return;
+  const ready = pages.filter(p => p.rendered && p.blob);
+  if (!ready.length){ setStatus("ยังไม่มีรูปให้ดาวน์โหลด", "warn"); return; }
+  busy = true;
+  const btn = $("#zipAll"); btn.disabled = true;
+  const prevText = btn.textContent;
+  try {
+    setStatus("กำลังรวมไฟล์ ZIP…"); showProg(true); setProg(0, ready.length + 1);
+    const zip = new JSZip();
+    for (let i = 0; i < ready.length; i++){
+      const p = ready[i];
+      const buf = await p.blob.arrayBuffer();
+      zip.file(`${pdfName}-page-${pad2(p.n)}.${ext()}`, buf);
+      setProg(i + 1, ready.length + 1);
+      setStatus(`กำลังรวมไฟล์ ${i + 1}/${ready.length}…`);
+    }
+    // JPEG/PNG are already compressed — STORE keeps it fast & avoids re-deflate cost.
+    const blob = await zip.generateAsync(
+      { type: "blob", compression: "STORE" },
+      (meta) => { setProg(ready.length + (meta.percent/100), ready.length + 1); }
+    );
+    setProg(ready.length + 1, ready.length + 1);
+    triggerDownload(blob, `${pdfName}-images.zip`);
+    setStatus(`✅ ดาวน์โหลด ZIP แล้ว — ${ready.length} หน้า • ${fmtSize(blob.size)}`, "ok");
+  } catch (err) {
+    console.error(err);
+    setStatus("รวมไฟล์ ZIP ไม่สำเร็จ", "err");
+  } finally {
+    busy = false; showProg(false);
+    btn.textContent = prevText; btn.disabled = false;
+  }
+};
+
+// ---- re-render when format / scale / quality change (if a PDF is loaded) ----
+function onFormatChange(){
+  const isPng = $("#fmt").value === "png";
+  $("#qwrap").classList.toggle("hide", isPng);
+}
+$("#fmt").onchange = () => { onFormatChange(); if (pdfDoc) renderAll(); };
+$("#scale").onchange = () => { if (pdfDoc) renderAll(); };
+$("#quality").oninput = (e) => { $("#qval").textContent = e.target.value + "%"; };
+// Re-encode at new JPEG quality only after the user releases the slider (cheap UX).
+$("#quality").onchange = () => { if (pdfDoc && $("#fmt").value !== "png") renderAll(); };
+
+onFormatChange();
+
+// ---- PWA manifest (embedded, helps "Add to Home Screen") ----
+try{
+  const icon = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" rx="96" fill="#6366f1"/><text x="50%" y="56%" font-size="200" text-anchor="middle" fill="#fff" font-family="sans-serif">IMG</text></svg>`);
+  const mf = {name:"PDF → รูปภาพ", short_name:"PDF→รูป", start_url:".", display:"standalone",
+    background_color:"#0f172a", theme_color:"#6366f1",
+    icons:[{src:icon, sizes:"512x512", type:"image/svg+xml"}]};
+  const l = document.createElement("link"); l.rel="manifest";
+  l.href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(mf));
+  document.head.appendChild(l);
+}catch(e){}
+
+// expose for debugging/manual tests
+window.JADEXTRACT = { renderPage, renderAll, get pages(){ return pages; }, get doc(){ return pdfDoc; } };
+</script>
+</body>
+</html>

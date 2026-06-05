@@ -1,0 +1,6 @@
+# Vendored library assets — keep byte-exact, never convert line endings
+vendor/** -text
+*.wasm binary
+*.bcmap binary
+*.pfb binary
+*.ttf binary
