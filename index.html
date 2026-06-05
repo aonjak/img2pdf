@@ -11,27 +11,26 @@
   :root{
     --bg:#0f172a; --card:#1e293b; --card2:#273449;
     --line:#334155; --text:#e2e8f0; --muted:#94a3b8;
-    --accent:#6366f1; --accent2:#818cf8; --danger:#ef4444; --ok:#22c55e;
+    --accent:#6366f1; --accent2:#818cf8; --danger:#ef4444; --ok:#22c55e; --warn:#f59e0b;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   body{
     margin:0; background:var(--bg); color:var(--text);
     font-family:-apple-system,"Segoe UI","Sarabun","Noto Sans Thai",sans-serif;
-    padding:0 0 120px;
+    padding:0 0 130px;
   }
   header{
     position:sticky; top:0; z-index:5; background:rgba(15,23,42,.92);
     backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
-    padding:14px 16px calc(14px + env(safe-area-inset-top));
-    padding-top:max(14px, env(safe-area-inset-top));
+    padding:14px 16px; padding-top:max(14px, env(safe-area-inset-top));
   }
   header h1{margin:0; font-size:19px; display:flex; align-items:center; gap:8px}
   header p{margin:4px 0 0; font-size:12px; color:var(--muted)}
   .wrap{max-width:560px; margin:0 auto; padding:16px}
   .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px}
   label.fld{display:block; font-size:13px; color:var(--muted); margin:0 0 8px}
-  select, input[type=range]{width:100%}
-  select{
+  select, input[type=range], input[type=number]{width:100%}
+  select, input[type=number]{
     background:var(--card2); color:var(--text); border:1px solid var(--line);
     border-radius:10px; padding:11px 12px; font-size:15px; appearance:none;
   }
@@ -40,6 +39,8 @@
   .qual{display:flex; align-items:center; gap:10px}
   .qual b{min-width:46px; text-align:right; font-variant-numeric:tabular-nums}
   input[type=range]{accent-color:var(--accent); height:28px}
+  .estimate{font-size:13px; margin-top:10px; color:var(--accent2); min-height:18px; font-variant-numeric:tabular-nums}
+  .estimate.over{color:var(--warn)}
   .btn{
     display:flex; align-items:center; justify-content:center; gap:8px;
     width:100%; border:0; border-radius:14px; padding:15px; font-size:16px;
@@ -61,17 +62,30 @@
   .icbtn{width:34px; height:34px; border-radius:9px; border:1px solid var(--line); background:var(--card); color:var(--text); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center}
   .icbtn:active{background:var(--line)}
   .icbtn.del{color:var(--danger)}
+  /* toggle */
+  .tgl{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .tgl .lbl{font-size:15px}
+  .switch{position:relative; width:50px; height:28px; flex:none}
+  .switch input{opacity:0; width:0; height:0}
+  .slider{position:absolute; inset:0; background:var(--line); border-radius:999px; transition:.2s}
+  .slider:before{content:""; position:absolute; width:22px; height:22px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s}
+  .switch input:checked + .slider{background:var(--accent)}
+  .switch input:checked + .slider:before{transform:translateX(22px)}
+  .target-body{margin-top:14px}
+  .target-body.off{display:none}
+  .mbrow{display:flex; align-items:center; gap:10px}
+  .mbrow input[type=number]{max-width:120px; text-align:center; font-size:17px; font-weight:600}
+  .mbrow span{font-size:15px; color:var(--muted)}
   .footbar{
     position:fixed; left:0; right:0; bottom:0; background:rgba(15,23,42,.96);
     backdrop-filter:blur(8px); border-top:1px solid var(--line);
-    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    padding:12px 16px; padding-bottom:max(12px, env(safe-area-inset-bottom));
   }
   .footbar .wrap{padding:0}
   #status{font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px; min-height:18px}
-  #status.ok{color:var(--ok)} #status.err{color:var(--danger)}
+  #status.ok{color:var(--ok)} #status.err{color:var(--danger)} #status.warn{color:var(--warn)}
   .dl{display:block; text-align:center; background:var(--ok); color:#04210f; font-weight:700; text-decoration:none; border-radius:14px; padding:14px; margin-top:10px}
   .hint{font-size:11px; color:var(--muted); margin-top:6px}
-  .pill{display:inline-block; font-size:11px; background:var(--card2); border:1px solid var(--line); color:var(--muted); border-radius:999px; padding:3px 9px; margin-top:8px}
 </style>
 </head>
 <body>
@@ -89,12 +103,14 @@
     <div class="empty" id="empty">ยังไม่มีรูป — กดปุ่ม “เพิ่มรูป” ด้านบน</div>
   </div>
 
+  <!-- ตั้งค่าคุณภาพ/ขนาด -->
   <div class="card">
-    <label class="fld">คุณภาพรูป (ยิ่งสูงยิ่งชัด ไฟล์ใหญ่ขึ้น)</label>
+    <label class="fld" id="qLabel">คุณภาพรูป (ยิ่งสูงยิ่งชัด ไฟล์ใหญ่ขึ้น)</label>
     <div class="qual">
       <input id="quality" type="range" min="50" max="100" value="85" step="1">
       <b id="qval">85%</b>
     </div>
+    <div class="estimate" id="estimate"></div>
     <div class="row" style="margin-top:14px">
       <div>
         <label class="fld">ลดขนาดภาพ (ด้านยาวสุด)</label>
@@ -116,7 +132,22 @@
         </select>
       </div>
     </div>
-    <div class="hint">เคล็ดลับ: เอกสาร/ข้อความใช้ 2000px + 85% กำลังดี • รูปสวยเก็บชัดใช้ 3000px + 90–95%</div>
+  </div>
+
+  <!-- จำกัดขนาดไฟล์ -->
+  <div class="card">
+    <div class="tgl">
+      <div class="lbl">📦 จำกัดขนาดไฟล์ PDF</div>
+      <label class="switch"><input type="checkbox" id="limitOn"><span class="slider"></span></label>
+    </div>
+    <div class="target-body off" id="limitBody">
+      <div class="mbrow">
+        <span>ไม่ให้เกิน</span>
+        <input id="limitMB" type="number" value="10" min="0.2" step="0.5" inputmode="decimal">
+        <span>MB</span>
+      </div>
+      <div class="hint">เปิดแล้วระบบจะ <b>ปรับคุณภาพ/ย่อขนาดให้อัตโนมัติ</b> จนไฟล์ไม่เกินที่ตั้งไว้ (หลายเว็บ/แอปจำกัด 10 MB)</div>
+    </div>
   </div>
 </div>
 
@@ -131,7 +162,8 @@
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
-let images = []; // {file, url, name}
+let images = []; // {file, url, name, bitmap}
+let busy = false;
 
 const fmtSize = b => b < 1024 ? b+" B" : b < 1048576 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(2)+" MB";
 
@@ -153,32 +185,46 @@ function render(){
       </div>`;
     ul.appendChild(li);
   });
-  $("#go").disabled = images.length === 0;
+  $("#go").disabled = images.length === 0 || busy;
+}
+
+function freeImage(im){
+  URL.revokeObjectURL(im.url);
+  if(im.bitmap && im.bitmap.close) try{ im.bitmap.close(); }catch(e){}
 }
 
 $("#list").addEventListener("click", e => {
-  const t = e.target.closest("button"); if(!t) return;
-  if(t.dataset.del !== undefined){ const i=+t.dataset.del; URL.revokeObjectURL(images[i].url); images.splice(i,1); }
+  const t = e.target.closest("button"); if(!t || busy) return;
+  if(t.dataset.del !== undefined){ const i=+t.dataset.del; freeImage(images[i]); images.splice(i,1); }
   if(t.dataset.up !== undefined){ const i=+t.dataset.up; [images[i-1],images[i]]=[images[i],images[i-1]]; }
   if(t.dataset.down !== undefined){ const i=+t.dataset.down; [images[i+1],images[i]]=[images[i],images[i+1]]; }
-  render();
+  render(); scheduleEstimate();
 });
 
 $("#add").onclick = () => $("#file").click();
 $("#file").onchange = e => {
   for(const f of e.target.files){
     if(!f.type.startsWith("image/")) continue;
-    images.push({file:f, url:URL.createObjectURL(f), name:f.name});
+    images.push({file:f, url:URL.createObjectURL(f), name:f.name, bitmap:null});
   }
   e.target.value = "";
   $("#result").innerHTML=""; $("#status").textContent=""; $("#status").className="";
-  render();
+  render(); scheduleEstimate();
 };
 
-$("#quality").oninput = e => $("#qval").textContent = e.target.value + "%";
+$("#quality").oninput = e => { $("#qval").textContent = e.target.value + "%"; scheduleEstimate(); };
+$("#resize").onchange = scheduleEstimate;
+$("#limitOn").onchange = e => {
+  $("#limitBody").classList.toggle("off", !e.target.checked);
+  $("#qLabel").textContent = e.target.checked
+    ? "คุณภาพสูงสุด (ระบบจะลดให้เองถ้าไฟล์เกิน)"
+    : "คุณภาพรูป (ยิ่งสูงยิ่งชัด ไฟล์ใหญ่ขึ้น)";
+  scheduleEstimate();
+};
+$("#limitMB").oninput = scheduleEstimate;
 
-// ---------- รูป → JPEG (ย่อขนาด + คุณภาพ) ----------
-function loadImage(file){
+// ---------- ถอดรหัสรูป (cache bitmap) + เข้ารหัสเป็น JPEG ตามขนาด/คุณภาพ ----------
+function loadImageEl(file){
   return new Promise((res,rej)=>{
     const img=new Image(); const u=URL.createObjectURL(file);
     img.onload=()=>{res(img); URL.revokeObjectURL(u);};
@@ -186,20 +232,76 @@ function loadImage(file){
     img.src=u;
   });
 }
-async function processImage(file, maxLong, quality){
-  const img = await loadImage(file);
-  let w = img.naturalWidth, h = img.naturalHeight;
+async function getBitmap(im){
+  if(im.bitmap) return im.bitmap;
+  try{ im.bitmap = await createImageBitmap(im.file); }
+  catch(e){ im.bitmap = await loadImageEl(im.file); }   // fallback
+  return im.bitmap;
+}
+async function encodeOne(im, maxLong, quality){
+  const src = await getBitmap(im);
+  let w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
   if(maxLong && Math.max(w,h) > maxLong){
     const s = maxLong / Math.max(w,h);
-    w = Math.round(w*s); h = Math.round(h*s);
+    w = Math.max(1, Math.round(w*s)); h = Math.max(1, Math.round(h*s));
   }
   const c = document.createElement("canvas"); c.width=w; c.height=h;
   const x = c.getContext("2d");
-  x.fillStyle="#fff"; x.fillRect(0,0,w,h);           // กันรูปโปร่งใส (PNG) เป็นพื้นดำ
+  x.fillStyle="#fff"; x.fillRect(0,0,w,h);
   x.imageSmoothingQuality="high";
-  x.drawImage(img,0,0,w,h);
+  x.drawImage(src,0,0,w,h);
   const blob = await new Promise(r=>c.toBlob(r,"image/jpeg",quality));
   return {bytes:new Uint8Array(await blob.arrayBuffer()), w, h};
+}
+async function encodeAll(imgs, maxLong, quality, onProg){
+  const out=[];
+  for(let i=0;i<imgs.length;i++){ out.push(await encodeOne(imgs[i], maxLong, quality)); if(onProg) onProg(i+1, imgs.length); }
+  return out;
+}
+
+// ขนาดไฟล์ PDF โดยประมาณ = ผลรวมไบต์ JPEG + เผื่อ overhead ของ PDF (~1KB/หน้า)
+function estimateBytes(enc, nPages){
+  return enc.reduce((a,e)=>a+e.bytes.length, 0) + nPages*1024;
+}
+
+// ลำดับขนาด (ด้านยาว) ที่จะไล่ย่อลงถ้าลดคุณภาพอย่างเดียวยังไม่พอ
+function dimLadder(maxLong0){
+  const steps=[3000,2400,2000,1600,1200,1000];
+  const start = (maxLong0 && maxLong0>0) ? maxLong0 : Infinity;
+  const lad=[maxLong0||0];
+  for(const d of steps) if(d < start) lad.push(d);
+  return lad;
+}
+
+// บีบให้ได้ไฟล์ <= targetBytes : เลือก "ขนาดใหญ่สุดที่พอดี" (binary search) แล้วดันคุณภาพสูงสุด
+// คุณสมบัติ monotonic: ขนาดเล็กลง/คุณภาพต่ำลง → ไฟล์เล็กลง → ใช้ binary search ได้ทั้งสองแกน
+async function fitToTarget(imgs, maxLong0, qCeil, targetBytes, encodeAllFn, onProg){
+  const ladder = dimLadder(maxLong0);                // เรียงจากใหญ่→เล็ก
+  const n = imgs.length, last = ladder.length-1;
+  // หา "ขนาดใหญ่สุดที่ยัง fit ที่คุณภาพต่ำสุด" (index เล็ก = ขนาดใหญ่)
+  let k, encLoK;
+  const lo0 = await encodeAllFn(imgs, ladder[0], 0.35, onProg);     // ลองขนาดใหญ่สุดก่อน (เคสปกติจบที่นี่)
+  if(estimateBytes(lo0, n) <= targetBytes){ k=0; encLoK=lo0; }
+  else if(last===0){ return {enc:lo0, q:0.35, dim:ladder[0], over:true}; }   // มีขนาดเดียว ยังเกิน
+  else {
+    const floorEnc = await encodeAllFn(imgs, ladder[last], 0.35, onProg);    // เล็กสุดยัง fit ไหม
+    if(estimateBytes(floorEnc, n) > targetBytes)
+      return {enc:floorEnc, q:0.35, dim:ladder[last], over:true};            // ทำไม่ได้จริง → ตัดจบ
+    k=last; encLoK=floorEnc;
+    let lo=1, hi=last-1;                             // binary search ขนาดที่เหมาะ
+    while(lo<=hi){ const mid=(lo+hi)>>1; const e=await encodeAllFn(imgs, ladder[mid], 0.35, onProg);
+      if(estimateBytes(e, n) <= targetBytes){ k=mid; encLoK=e; hi=mid-1; } else lo=mid+1; }
+  }
+  const dim=ladder[k];
+  // 3) binary search "คุณภาพสูงสุด" ที่ขนาดนั้น โดยไม่เกิน target และไม่เกิน qCeil
+  let loQ=0.35, hiQ=Math.max(0.36, qCeil), best={enc:encLoK, q:0.35, dim};
+  for(let i=0;i<6;i++){
+    const mid=(loQ+hiQ)/2;
+    const e = await encodeAllFn(imgs, dim, mid, onProg);
+    if(estimateBytes(e, n) <= targetBytes){ best={enc:e, q:mid, dim}; loQ=mid; }
+    else hiQ=mid;
+  }
+  return {...best, over:false};
 }
 
 // ---------- สร้าง PDF (ฝัง JPEG ตรงๆ ด้วย DCTDecode — ไม่ต้องมี library) ----------
@@ -220,13 +322,12 @@ function buildPdf(items, pageMode){
 
   items.forEach((it,i)=>{
     const pg=3+3*i, ct=4+3*i, im=5+3*i;
-    // จัดวางรูปบนหน้า
     let pw,ph,dx,dy,dw,dh;
     if(pageMode==="auto"){ pw=it.w; ph=it.h; dx=0; dy=0; dw=it.w; dh=it.h; }
     else{
       const A4=[595.28,841.89], LT=[612,792];
       let [pwS,phS]= pageMode==="a4"?A4:LT;
-      if(it.w>it.h){ [pwS,phS]=[phS,pwS]; }            // รูปแนวนอน → หน้าแนวนอน
+      if(it.w>it.h){ [pwS,phS]=[phS,pwS]; }
       pw=pwS; ph=phS;
       const s=Math.min(pw/it.w, ph/it.h);
       dw=it.w*s; dh=it.h*s; dx=(pw-dw)/2; dy=(ph-dh)/2;
@@ -248,37 +349,81 @@ function buildPdf(items, pageMode){
   return new Blob(chunks,{type:"application/pdf"});
 }
 
+// ---------- ประเมินขนาดสด (debounce + กันชนกัน) ----------
+let estTimer=null, estRunId=0;
+function scheduleEstimate(){ clearTimeout(estTimer); estTimer=setTimeout(runEstimate, 350); }
+async function runEstimate(){
+  const el=$("#estimate"); el.className="estimate";
+  if(!images.length || busy){ el.textContent=""; return; }
+  const id=++estRunId;
+  const q=(+$("#quality").value)/100, maxLong=+$("#resize").value;
+  el.textContent = images.length>3 ? "กำลังคำนวณขนาด…" : "กำลังคำนวณขนาด…";
+  try{
+    const enc = await encodeAll(images, maxLong, q, ()=>{ if(id!==estRunId) throw new Error("cancel"); });
+    if(id!==estRunId) return;                        // มีการคำนวณใหม่แทรก
+    const bytes = estimateBytes(enc, images.length);
+    const limitOn=$("#limitOn").checked, limitB=(+$("#limitMB").value)*1048576;
+    let txt = `ขนาดโดยประมาณ ~${fmtSize(bytes)}`;
+    if(limitOn && bytes>limitB){ el.className="estimate over"; txt += ` › เกิน ${(+$("#limitMB").value)} MB ระบบจะบีบให้ตอนสร้าง`; }
+    el.textContent = txt;
+  }catch(e){ if(id===estRunId) el.textContent=""; }
+}
+
 // ---------- ปุ่มสร้าง ----------
 $("#go").onclick = async () => {
-  const q = (+$("#quality").value)/100;
-  const maxLong = +$("#resize").value;
+  if(busy || !images.length) return;
+  const q0 = (+$("#quality").value)/100;
+  const maxLong0 = +$("#resize").value;
   const pageMode = $("#page").value;
+  const limitOn = $("#limitOn").checked;
+  const limitMB = +$("#limitMB").value;
+  const targetBytes = limitMB*1048576;
   const st = $("#status"); st.className=""; $("#result").innerHTML="";
-  $("#go").disabled = true;
+  busy=true; $("#go").disabled=true; clearTimeout(estTimer); estRunId++;
   try{
-    const items=[]; let outBytes=0;
-    for(let i=0;i<images.length;i++){
-      st.textContent = `กำลังประมวลผลรูป ${i+1}/${images.length} …`;
-      const it = await processImage(images[i].file, maxLong, q);
-      outBytes += it.bytes.length; items.push(it);
-      await new Promise(r=>setTimeout(r));            // ปล่อยให้ UI หายใจ
+    if(limitOn && (!(limitMB>0))) throw new Error("ใส่ขนาด MB ให้ถูกต้อง");
+    st.textContent = "กำลังประมวลผลรูป…";
+    let items = await encodeAll(images, maxLong0, q0, (i,n)=> st.textContent=`กำลังประมวลผลรูป ${i}/${n} …`);
+    let finalQ=q0, finalDim=maxLong0, over=false, auto=false;
+
+    if(limitOn && estimateBytes(items, images.length) > targetBytes){
+      auto=true;
+      let pass=0;
+      st.textContent = "กำลังบีบให้พอดีกับขนาดที่กำหนด…";
+      const res = await fitToTarget(images, maxLong0, q0, targetBytes, async (im,d,qq)=>{
+        st.textContent = `กำลังบีบให้พอดี… (รอบ ${++pass})`;
+        return encodeAll(im, d, qq);
+      });
+      items=res.enc; finalQ=res.q; finalDim=res.dim; over=res.over;
     }
+
     st.textContent = "กำลังประกอบไฟล์ PDF …";
     const pdf = buildPdf(items, pageMode);
     const url = URL.createObjectURL(pdf);
     const d = new Date();
     const name = `รูป_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}_${String(d.getHours()).padStart(2,"0")}${String(d.getMinutes()).padStart(2,"0")}.pdf`;
-    st.className="ok"; st.textContent = `✅ เสร็จแล้ว — ${images.length} หน้า • ขนาดไฟล์ ${fmtSize(pdf.size)}`;
+
+    const dimTxt = finalDim>0 ? `${finalDim}px` : "เต็ม";
+    if(over){
+      st.className="warn";
+      st.textContent = `⚠️ เล็กสุดเท่าที่ได้ ${fmtSize(pdf.size)} (ยังเกิน ${limitMB} MB) • คุณภาพ ${Math.round(finalQ*100)}% • ${dimTxt} — ลองลดจำนวนรูป`;
+    }else if(auto){
+      st.className="ok";
+      st.textContent = `✅ บีบให้พอดีแล้ว — ${images.length} หน้า • ${fmtSize(pdf.size)} (≤ ${limitMB} MB) • คุณภาพ ${Math.round(finalQ*100)}%${finalDim!==maxLong0?` • ย่อเหลือ ${dimTxt}`:""}`;
+    }else{
+      st.className="ok";
+      st.textContent = `✅ เสร็จแล้ว — ${images.length} หน้า • ขนาดไฟล์ ${fmtSize(pdf.size)}`;
+    }
     $("#result").innerHTML = `<a class="dl" href="${url}" download="${name}">⬇️ บันทึก / เปิด PDF</a>`;
   }catch(err){
     st.className="err"; st.textContent = "❌ " + (err.message||"เกิดข้อผิดพลาด");
   }finally{
-    $("#go").disabled = images.length===0;
+    busy=false; $("#go").disabled = images.length===0; scheduleEstimate();
   }
 };
 
 // เผยฟังก์ชันไว้ทดสอบ
-window.JADPDF = {processImage, buildPdf};
+window.JADPDF = {encodeOne, encodeAll, estimateBytes, dimLadder, fitToTarget, buildPdf};
 
 // PWA manifest แบบฝังในไฟล์ (ช่วยตอน “เพิ่มไปหน้าจอหลัก”)
 try{
