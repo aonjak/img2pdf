@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>วิธีใช้ — เครื่องมือ PDF ส่วนตัว</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--card2:#273449;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#6366f1;--accent2:#818cf8;--ok:#22c55e;--warn:#f59e0b;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Segoe UI","Sarabun","Noto Sans Thai",sans-serif;
+    line-height:1.65;padding:0 0 50px;padding-top:env(safe-area-inset-top)}
+  header{position:sticky;top:0;background:rgba(15,23,42,.92);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:14px 16px}
+  header a{color:var(--muted);text-decoration:none;font-size:13px;display:inline-block;margin-bottom:6px}
+  header h1{margin:0;font-size:20px}
+  .wrap{max-width:600px;margin:0 auto;padding:18px 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px}
+  .card h2{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:8px}
+  .card .sub{font-size:12px;color:var(--muted);margin:0 0 10px}
+  ol{margin:8px 0 0;padding-left:22px}
+  ol li{margin-bottom:6px;font-size:14.5px}
+  .tip{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:12px;
+    padding:11px 14px;font-size:13px;color:#bbf7d0;margin-top:10px}
+  .warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.35);border-radius:12px;
+    padding:11px 14px;font-size:13px;color:#fde68a;margin-top:10px}
+  .intro{font-size:14px;color:var(--muted);margin-bottom:18px}
+  b.k{color:var(--accent2)}
+  .big{font-size:15px}
+  hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+  h3.sec{font-size:13px;color:var(--muted);text-transform:none;margin:0 0 10px;letter-spacing:.3px}
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html">← หน้าหลัก</a>
+  <h1>📖 วิธีใช้งาน</h1>
+</header>
+
+<div class="wrap">
+  <p class="intro">เครื่องมือทุกตัว <b class="k">ทำงานในเครื่องคุณ 100%</b> — ไฟล์ไม่ถูกส่งขึ้นอินเทอร์เน็ต ใช้ออฟไลน์ได้ ปลอดภัยกับเอกสารส่วนตัว</p>
+
+  <h3 class="sec">เครื่องมือทั้งหมด</h3>
+
+  <div class="card">
+    <h2>📷 รูป → PDF</h2>
+    <p class="sub">รวมรูปหลายใบให้เป็นไฟล์ PDF</p>
+    <ol>
+      <li>กด <b class="k">เพิ่มรูป</b> เลือกรูปได้หลายใบ</li>
+      <li>เรียงลำดับด้วยปุ่ม ↑ ↓ หรือลบด้วย ✕</li>
+      <li>ปรับ <b class="k">คุณภาพ</b> และ <b class="k">ขนาด</b> ได้ • เปิด "จำกัดขนาดไฟล์" ถ้าต้องการให้ไม่เกินกี่ MB</li>
+      <li>กด <b class="k">สร้าง PDF</b> → กด <b class="k">บันทึก/เปิด PDF</b></li>
+    </ol>
+    <div class="tip">💡 ส่งเอกสารที่จำกัด 10 MB: เปิดสวิตช์ "จำกัดขนาด" ตั้งไว้ 10 ระบบบีบให้เอง</div>
+  </div>
+
+  <div class="card">
+    <h2>🖼️ PDF → รูป</h2>
+    <p class="sub">แตกหน้าใน PDF ออกมาเป็นรูปภาพ</p>
+    <ol>
+      <li>กด <b class="k">เลือกไฟล์ PDF</b></li>
+      <li>เลือกรูปแบบ <b class="k">JPG</b> (ไฟล์เล็ก) หรือ <b class="k">PNG</b> (คมชัด) และความละเอียด</li>
+      <li>กด ⬇️ ใต้รูปเพื่อเซฟ <b class="k">ทีละรูป</b> หรือ <b class="k">ดาวน์โหลดทั้งหมด (ZIP)</b></li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>🔗 รวม PDF</h2>
+    <p class="sub">รวมหลายไฟล์ PDF เป็นไฟล์เดียว</p>
+    <ol>
+      <li>กด <b class="k">เพิ่มไฟล์ PDF</b> เลือกได้หลายไฟล์</li>
+      <li>จัดลำดับด้วย ↑ ↓ (ลำดับนี้คือลำดับหน้าในไฟล์ใหม่)</li>
+      <li>กด <b class="k">รวมเป็นไฟล์เดียว</b> → บันทึก</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>🗜️ บีบ PDF ให้เล็ก</h2>
+    <p class="sub">ลดขนาดไฟล์ PDF ให้ส่งง่ายขึ้น</p>
+    <ol>
+      <li>กด <b class="k">เลือกไฟล์ PDF</b> (เห็นขนาดเดิม)</li>
+      <li>เลือก <b class="k">ระดับการบีบ</b> หรือกำหนด "ไม่เกินกี่ MB"</li>
+      <li>กด <b class="k">บีบไฟล์</b> → เห็นขนาดก่อน→หลัง แล้วบันทึก</li>
+    </ol>
+    <div class="warn">⚠️ เหมาะกับ PDF ที่เป็นรูปสแกน/รูปถ่าย — ข้อความที่เคยเลือก-คัดลอกได้จะกลายเป็นภาพ</div>
+  </div>
+
+  <div class="card">
+    <h2>🔒 ใส่รหัส PDF</h2>
+    <p class="sub">ล็อกไฟล์ด้วยรหัสผ่าน (AES-256)</p>
+    <ol>
+      <li>กด <b class="k">เลือกไฟล์ PDF</b></li>
+      <li>ตั้ง <b class="k">รหัสผ่าน</b> และพิมพ์ยืนยันอีกครั้ง</li>
+      <li>กด <b class="k">ใส่รหัส</b> → บันทึกไฟล์ที่ล็อกแล้ว</li>
+      <li>เปิดไฟล์ล็อก: ใช้แท็บ <b class="k">ถอดรหัส</b> ใส่รหัสเดิมเพื่อปลดล็อก</li>
+    </ol>
+    <div class="warn">⚠️ ถ้าลืมรหัส จะเปิดไฟล์ไม่ได้อีกเลย — ระบบไม่เก็บรหัสไว้ที่ไหน จดรหัสไว้ให้ดี</div>
+  </div>
+
+  <hr>
+  <h3 class="sec">เคล็ดลับ</h3>
+  <div class="card big">
+    <ol>
+      <li><b class="k">ติดตั้งเป็นแอป:</b> เปิดเว็บในมือถือ → เมนู Chrome → "เพิ่มลงในหน้าจอหลัก" จะได้ไอคอนเหมือนแอป เปิดเต็มจอ</li>
+      <li><b class="k">ใช้ออฟไลน์:</b> หลังเปิดครั้งแรก ใช้ได้แม้ไม่มีเน็ต (ไฟล์ไม่ถูกส่งออกอยู่แล้ว)</li>
+      <li><b class="k">ปลอดภัย:</b> เอกสารทุกอย่างอยู่ในเครื่องคุณคนเดียว — ไม่มีการอัปโหลด ไม่มีบัญชี ไม่มีโฆษณา</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>

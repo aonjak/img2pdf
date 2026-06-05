@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>บีบ PDF ให้เล็ก</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#273449;
+    --line:#334155; --text:#e2e8f0; --muted:#94a3b8;
+    --accent:#6366f1; --accent2:#818cf8; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI","Sarabun","Noto Sans Thai",sans-serif;
+    padding:0 0 24px;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:rgba(15,23,42,.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+    padding:12px 16px; padding-top:max(12px, env(safe-area-inset-top));
+  }
+  header .top{display:flex; align-items:center; gap:10px}
+  header h1{margin:0; font-size:19px; display:flex; align-items:center; gap:8px; flex:1}
+  header p{margin:4px 0 0; font-size:12px; color:var(--muted)}
+  header a.back{font-size:13px; color:var(--accent2); text-decoration:none; white-space:nowrap; padding:6px 8px; border-radius:8px}
+  header a.back:active{background:var(--card2)}
+  .wrap{max-width:680px; margin:0 auto; padding:16px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px}
+  label.fld{display:block; font-size:13px; color:var(--muted); margin:0 0 8px}
+  select, input[type=number]{width:100%}
+  select, input[type=number]{
+    background:var(--card2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:11px 12px; font-size:15px; appearance:none;
+  }
+  input[type=number]{font-variant-numeric:tabular-nums}
+  .row{display:flex; gap:12px}
+  .row>div{flex:1; min-width:0}
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; border:0; border-radius:14px; padding:15px; font-size:16px;
+    font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .btn-add{background:var(--card2); color:var(--text); border:1px dashed var(--line)}
+  .btn-add:active{background:var(--line)}
+  .btn-go{background:var(--ok); color:#04210f; box-shadow:0 6px 20px rgba(34,197,94,.30)}
+  .btn-go:disabled{opacity:.4; box-shadow:none; cursor:default}
+  .btn-go:active:not(:disabled){filter:brightness(.94)}
+  .btn-dl{background:var(--ok); color:#04210f; text-decoration:none; box-shadow:0 6px 20px rgba(34,197,94,.30)}
+  .btn-dl:active{filter:brightness(.94)}
+
+  /* preset segmented control */
+  .seg{display:flex; gap:8px}
+  .seg button{
+    flex:1; min-width:0; border:1px solid var(--line); background:var(--card2);
+    color:var(--text); border-radius:12px; padding:12px 6px; cursor:pointer;
+    font-family:inherit; font-size:14px; font-weight:600; line-height:1.2;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .seg button .sub{font-size:10.5px; color:var(--muted); font-weight:400}
+  .seg button[aria-pressed="true"]{
+    border-color:var(--accent); background:rgba(99,102,241,.16); color:var(--accent2);
+  }
+  .seg button[aria-pressed="true"] .sub{color:var(--accent2)}
+  .seg button:active{filter:brightness(1.1)}
+
+  /* advanced (target MB) toggle */
+  .adv-head{display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none}
+  .adv-head .lbl{flex:1; font-size:14px; font-weight:600}
+  .sw{position:relative; width:46px; height:26px; flex:none}
+  .sw input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+  .sw .track{position:absolute; inset:0; background:var(--line); border-radius:999px; transition:background .15s}
+  .sw .knob{position:absolute; top:3px; left:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition:transform .15s}
+  .sw input:checked ~ .track{background:var(--accent)}
+  .sw input:checked ~ .knob{transform:translateX(20px)}
+  .adv-body{margin-top:14px}
+  .adv-body.off{display:none}
+  .mbrow{display:flex; align-items:center; gap:10px}
+  .mbrow input{flex:1}
+  .mbrow span{font-size:15px; color:var(--muted); flex:none}
+
+  #fileMeta{font-size:14px; margin-top:10px; color:var(--accent2); min-height:18px; line-height:1.5}
+  #status{font-size:13px; color:var(--muted); text-align:center; margin:0 0 12px; min-height:18px; line-height:1.5}
+  #status.ok{color:var(--ok)} #status.err{color:var(--danger)} #status.warn{color:var(--warn)}
+  .prog{height:6px; background:var(--card2); border-radius:999px; overflow:hidden; margin:10px 0 4px; display:none}
+  .prog.show{display:block}
+  .prog i{display:block; height:100%; width:0; background:var(--accent); transition:width .15s}
+
+  .empty{text-align:center; color:var(--muted); font-size:14px; padding:26px 10px}
+  .empty .big{font-size:34px; margin-bottom:8px}
+  .hint{font-size:11px; color:var(--muted); margin-top:8px; line-height:1.5}
+  .note{
+    display:flex; gap:9px; align-items:flex-start; font-size:12px; line-height:1.5;
+    background:rgba(245,158,11,.10); border:1px solid rgba(245,158,11,.35);
+    color:#fde68a; border-radius:12px; padding:10px 12px; margin-top:12px;
+  }
+  .note .ic{font-size:15px; line-height:1.3; flex:none}
+
+  /* result before/after */
+  .ba{display:none; margin-top:6px}
+  .ba.show{display:block}
+  .ba .nums{display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; margin-bottom:6px}
+  .ba .box{text-align:center; min-width:96px}
+  .ba .box .k{font-size:11px; color:var(--muted)}
+  .ba .box .v{font-size:20px; font-weight:700; font-variant-numeric:tabular-nums}
+  .ba .arrow{font-size:20px; color:var(--muted)}
+  .ba .before .v{color:var(--muted)}
+  .ba .after .v{color:var(--ok)}
+  .ba .pill{
+    display:block; text-align:center; font-size:15px; font-weight:700; margin:4px 0 14px;
+  }
+  .ba .pill.win{color:var(--ok)}
+  .ba .pill.lose{color:var(--warn)}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>🗜️ บีบ PDF ให้เล็ก</h1>
+    <a class="back" href="index.html">← หน้าหลัก</a>
+  </div>
+  <p>🔒 ทำงานในเครื่อง ไม่ส่งไฟล์ขึ้นเน็ต</p>
+</header>
+
+<div class="wrap">
+  <input id="file" type="file" accept="application/pdf" hidden>
+  <button class="btn btn-add" id="pick">📄 เลือกไฟล์ PDF</button>
+  <div id="fileMeta"></div>
+
+  <!-- ตัวเลือกการบีบ -->
+  <div class="card" id="optCard">
+    <label class="fld">ระดับการบีบ</label>
+    <div class="seg" id="preset">
+      <button type="button" data-preset="high"    aria-pressed="false">บีบมาก<span class="sub">เล็กสุด</span></button>
+      <button type="button" data-preset="balanced" aria-pressed="true">แนะนำ<span class="sub">สมดุล</span></button>
+      <button type="button" data-preset="quality" aria-pressed="false">คุณภาพสูง<span class="sub">คมชัด</span></button>
+    </div>
+
+    <!-- ขั้นสูง: จำกัดขนาด MB -->
+    <div style="margin-top:16px">
+      <label class="adv-head" for="limitOn">
+        <span class="lbl">📐 จำกัดขนาดไฟล์ (ขั้นสูง)</span>
+        <span class="sw">
+          <input type="checkbox" id="limitOn">
+          <span class="track"></span><span class="knob"></span>
+        </span>
+      </label>
+      <div class="adv-body off" id="limitBody">
+        <div class="mbrow">
+          <span>ไม่เกิน</span>
+          <input id="limitMB" type="number" value="2" min="0.2" step="0.5" inputmode="decimal">
+          <span>MB</span>
+        </div>
+        <div class="hint">ระบบจะ <b>ปรับคุณภาพ/ย่อความละเอียดให้อัตโนมัติ</b> จนไฟล์ไม่เกินที่ตั้งไว้ (ถ้าทำไม่ได้จริงจะบอกขนาดเล็กสุดที่ทำได้)</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="ic">⚠️</span>
+      <span>เหมาะกับ PDF ที่เป็นรูปสแกน/รูปถ่าย (ข้อความที่เลือกได้จะกลายเป็นภาพ)</span>
+    </div>
+  </div>
+
+  <!-- ผลลัพธ์ -->
+  <div class="card" id="resultCard">
+    <div id="status"></div>
+    <div class="prog" id="prog"><i id="progBar"></i></div>
+
+    <div class="empty" id="empty">
+      <div class="big">🗜️</div>
+      ยังไม่มีไฟล์ — กดปุ่ม “เลือกไฟล์ PDF” ด้านบน
+    </div>
+
+    <!-- before → after -->
+    <div class="ba" id="ba">
+      <div class="nums">
+        <div class="box before"><div class="k">ก่อนบีบ</div><div class="v" id="baBefore">—</div></div>
+        <div class="arrow">→</div>
+        <div class="box after"><div class="k">หลังบีบ</div><div class="v" id="baAfter">—</div></div>
+      </div>
+      <span class="pill" id="baPill"></span>
+      <a class="btn btn-dl hidden" id="dl" download>⬇️ บันทึก PDF</a>
+    </div>
+
+    <button class="btn btn-go" id="go" disabled style="margin-top:14px">🗜️ บีบไฟล์</button>
+  </div>
+</div>
+
+<!-- Vendored, offline. No CDN. Reuses extract.html's pdf.js + merge.html's pdf-lib. -->
+<script src="vendor/extract/pdf.min.js"></script>
+<script src="vendor/merge/pdf-lib.min.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+// ---- pdf.js setup: all assets local & offline (same as extract.html) ----
+const PDFJS = window.pdfjsLib;
+const VENDOR = "vendor/extract/";
+PDFJS.GlobalWorkerOptions.workerSrc = VENDOR + "pdf.worker.min.js";
+const FONT_OPTS = {
+  standardFontDataUrl: VENDOR + "standard_fonts/",
+  cMapUrl: VENDOR + "cmaps/",
+  cMapPacked: true,
+};
+
+// ====================================================================
+// COMPRESSION LOGIC (mirrored 1:1 by _build_compress/test.js)
+// ====================================================================
+//
+// Presets map a "ระดับการบีบ" to (scale, jpeg quality).
+//   scale   = pdf.js render scale relative to the page's native 72-DPI box
+//             (so 1.5 ≈ 108 DPI, 2.0 ≈ 144 DPI). Bigger = sharper but heavier.
+//   quality = JPEG quality 0..1 for canvas encode.
+const PRESETS = {
+  high:     { scale: 1.2, quality: 0.55, label: "บีบมาก" },     // smallest
+  balanced: { scale: 1.5, quality: 0.72, label: "แนะนำ" },      // default
+  quality:  { scale: 2.0, quality: 0.85, label: "คุณภาพสูง" },  // sharpest
+};
+
+// Ladder of render scales used when target-size mode must shrink resolution.
+// Ordered large→small; binary-searched for "largest scale that still fits".
+const SCALE_LADDER = [2.0, 1.7, 1.5, 1.3, 1.1, 0.9, 0.75, 0.6];
+
+// PDF structural overhead estimate per page (catalog/xref/object headers etc.)
+const PAGE_OVERHEAD = 1024;
+
+// ---- state ----
+let pdfDoc = null;          // current PDFDocumentProxy
+let pageCount = 0;
+let pdfName = "document";   // base name (no extension)
+let origBytes = 0;          // original file size
+let busy = false;
+let preset = "balanced";
+let lastUrl = null;         // object URL for the produced PDF (revoke on redo)
+
+// ---- helpers (fmtSize identical to the suite) ----
+const fmtSize = b => b < 1024 ? b + " B" : b < 1048576 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(2)+" MB";
+function setStatus(msg, cls){ const s=$("#status"); s.textContent=msg||""; s.className = cls||""; }
+function showProg(show){ $("#prog").classList.toggle("show", !!show); }
+function setProg(done, total){ $("#progBar").style.width = total ? Math.max(0,Math.min(100,Math.round(done/total*100)))+"%" : "0%"; }
+function fileBase(name){ return (name || "document").replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "_").trim() || "document"; }
+
+// canvas.toBlob -> Uint8Array (JPEG). Fallback to dataURL on ancient engines.
+function canvasToJpegBytes(canvas, quality){
+  return new Promise((resolve, reject) => {
+    const done = blob => { blob.arrayBuffer().then(ab => resolve(new Uint8Array(ab)), reject); };
+    if (canvas.toBlob) {
+      canvas.toBlob(b => b ? done(b) : reject(new Error("เข้ารหัสรูปไม่สำเร็จ")), "image/jpeg", quality);
+    } else {
+      try {
+        const url = canvas.toDataURL("image/jpeg", quality);
+        const bin = atob(url.split(",")[1]); const arr = new Uint8Array(bin.length);
+        for (let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+        resolve(arr);
+      } catch(e){ reject(e); }
+    }
+  });
+}
+
+// ---- render ONE page to a JPEG (bytes + pixel w/h) at given scale+quality ----
+// This is THE core op the test mirrors. White background flatten (JPEG has no alpha).
+async function renderPageJpeg(n, scale, quality){
+  const page = await pdfDoc.getPage(n);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.ceil(viewport.width));
+  canvas.height = Math.max(1, Math.ceil(viewport.height));
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  const bytes = await canvasToJpegBytes(canvas, quality);
+  const w = canvas.width, h = canvas.height;
+  canvas.width = canvas.height = 0;          // free backing store
+  if (page.cleanup) try { page.cleanup(); } catch(e){}
+  return { bytes, w, h };
+}
+
+// ---- render ALL pages at given scale+quality -> array of {bytes,w,h} ----
+async function renderAll(scale, quality, onProg){
+  const out = [];
+  for (let n = 1; n <= pageCount; n++){
+    out.push(await renderPageJpeg(n, scale, quality));
+    if (onProg) onProg(n, pageCount);
+  }
+  return out;
+}
+
+const totalBytes = imgs => imgs.reduce((a,im) => a + im.bytes.length, 0) + imgs.length * PAGE_OVERHEAD;
+
+// ---- assemble a PDF from rendered JPEGs using pdf-lib (page = image size) ----
+async function buildPdf(imgs){
+  const { PDFDocument } = PDFLib;
+  const doc = await PDFDocument.create();
+  doc.setProducer("JadJob PDF Tools");
+  doc.setCreator("บีบ PDF ให้เล็ก");
+  for (const im of imgs){
+    const jpg = await doc.embedJpg(im.bytes);
+    const page = doc.addPage([im.w, im.h]);   // 1 image px = 1 PDF point
+    page.drawImage(jpg, { x: 0, y: 0, width: im.w, height: im.h });
+  }
+  // useObjectStreams keeps the wrapper lean; JPEGs are already compressed.
+  const bytes = await doc.save({ useObjectStreams: true });
+  return bytes;   // Uint8Array, starts with "%PDF"
+}
+
+// ====================================================================
+// TARGET-SIZE MODE: auto-tune (scale, quality) to fit <= targetBytes.
+// Monotonic: smaller scale OR lower quality => smaller output. So:
+//   1) pick the LARGEST scale whose floor-quality output still fits (binary search),
+//   2) at that scale, push quality as high as possible without exceeding target
+//      (binary search on quality).
+// Reports honestly when even the smallest scale @ floor-quality overshoots.
+// Works on the JPEG-bytes estimate (fast); final assembled PDF is ~estimate.
+// ====================================================================
+const Q_FLOOR = 0.30;   // never encode uglier than this
+const Q_CEIL  = 0.92;   // never bother above this
+
+async function fitToTarget(targetBytes, onProg){
+  // 1) largest scale that fits at floor quality
+  let chosen = null;                 // {scale, imgsAtFloor}
+  // quick win: biggest scale already fits at floor?
+  const big = await renderAll(SCALE_LADDER[0], Q_FLOOR, onProg);
+  if (totalBytes(big) <= targetBytes){
+    chosen = { scale: SCALE_LADDER[0], imgs: big };
+  } else {
+    // smallest scale at floor — if even this overshoots, impossible.
+    const small = await renderAll(SCALE_LADDER[SCALE_LADDER.length-1], Q_FLOOR, onProg);
+    if (totalBytes(small) > targetBytes){
+      return { imgs: small, scale: SCALE_LADDER[SCALE_LADDER.length-1], quality: Q_FLOOR, over: true };
+    }
+    // binary search the ladder for the largest fitting scale (floor quality)
+    chosen = { scale: SCALE_LADDER[SCALE_LADDER.length-1], imgs: small };
+    let lo = 1, hi = SCALE_LADDER.length - 2;
+    while (lo <= hi){
+      const mid = (lo + hi) >> 1;
+      const e = await renderAll(SCALE_LADDER[mid], Q_FLOOR, onProg);
+      if (totalBytes(e) <= targetBytes){ chosen = { scale: SCALE_LADDER[mid], imgs: e }; hi = mid - 1; }
+      else lo = mid + 1;
+    }
+  }
+  // 2) at chosen scale, binary-search the highest quality that still fits
+  let loQ = Q_FLOOR, hiQ = Q_CEIL, best = { imgs: chosen.imgs, quality: Q_FLOOR };
+  for (let i = 0; i < 6; i++){
+    const midQ = (loQ + hiQ) / 2;
+    const e = await renderAll(chosen.scale, midQ, onProg);
+    if (totalBytes(e) <= targetBytes){ best = { imgs: e, quality: midQ }; loQ = midQ; }
+    else hiQ = midQ;
+  }
+  return { imgs: best.imgs, scale: chosen.scale, quality: best.quality, over: false };
+}
+
+// ====================================================================
+// UI WIRING
+// ====================================================================
+function resetResult(){
+  if (lastUrl){ URL.revokeObjectURL(lastUrl); lastUrl = null; }
+  $("#ba").classList.remove("show");
+  $("#dl").classList.add("hidden");
+  $("#dl").removeAttribute("href");
+  setStatus(""); showProg(false); setProg(0,0);
+}
+function resetAll(){
+  resetResult();
+  if (pdfDoc){ try{ pdfDoc.destroy(); }catch(e){} pdfDoc = null; }
+  pageCount = 0; origBytes = 0;
+  $("#empty").classList.remove("hidden");
+  $("#go").disabled = true;
+}
+
+// preset buttons
+$("#preset").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-preset]");
+  if (!b) return;
+  preset = b.dataset.preset;
+  for (const x of $("#preset").querySelectorAll("button"))
+    x.setAttribute("aria-pressed", String(x === b));
+});
+
+// advanced toggle
+$("#limitOn").addEventListener("change", (e) => {
+  $("#limitBody").classList.toggle("off", !e.target.checked);
+});
+
+// pick + load
+$("#pick").onclick = () => $("#file").click();
+$("#file").onchange = async (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  await loadPdf(f);
+};
+
+async function loadPdf(file){
+  resetAll();
+  pdfName = fileBase(file.name);
+  origBytes = file.size;
+  $("#fileMeta").textContent = `📄 ${file.name} • ${fmtSize(file.size)}`;
+  setStatus("กำลังเปิดไฟล์…");
+  try {
+    const buf = await file.arrayBuffer();
+    const task = PDFJS.getDocument({ data: new Uint8Array(buf), isEvalSupported: false, ...FONT_OPTS });
+    pdfDoc = await task.promise;
+    pageCount = pdfDoc.numPages;
+    $("#empty").classList.add("hidden");
+    $("#fileMeta").textContent = `📄 ${file.name} • ${fmtSize(file.size)} • ${pageCount} หน้า`;
+    setStatus(`พร้อมบีบ — ${pageCount} หน้า`, "");
+    $("#go").disabled = false;
+  } catch (err) {
+    console.error(err);
+    const enc = err && (err.name === "PasswordException");
+    resetAll();
+    setStatus(enc
+      ? "เปิดไฟล์ไม่ได้ — ไฟล์นี้มีรหัสผ่าน (ปลดล็อกก่อนแล้วลองใหม่)"
+      : "เปิดไฟล์ไม่ได้ — อาจเป็นไฟล์เสียหรือไม่ใช่ PDF", "err");
+    $("#fileMeta").textContent = "";
+  }
+}
+
+// ---- the BIG button ----
+$("#go").onclick = async () => {
+  if (busy || !pdfDoc) return;
+  busy = true;
+  $("#go").disabled = true;
+  resetResult();
+  const limitOn = $("#limitOn").checked;
+  showProg(true); setProg(0, pageCount);
+
+  try {
+    let imgs, usedScale, usedQ, over = false;
+
+    if (limitOn){
+      const limitMB = parseFloat($("#limitMB").value);
+      if (!(limitMB > 0)) throw new Error("ใส่ขนาด MB ให้ถูกต้อง (มากกว่า 0)");
+      const targetBytes = Math.round(limitMB * 1048576);
+      setStatus(`กำลังหาค่าที่บีบให้ ≤ ${limitMB} MB …`);
+      const res = await fitToTarget(targetBytes, (d,t) => {
+        setProg(d, t); setStatus(`กำลังบีบ… หน้า ${d}/${t}`);
+      });
+      imgs = res.imgs; usedScale = res.scale; usedQ = res.quality; over = res.over;
+    } else {
+      const p = PRESETS[preset];
+      usedScale = p.scale; usedQ = p.quality;
+      setStatus(`กำลังบีบแบบ “${p.label}” …`);
+      imgs = await renderAll(usedScale, usedQ, (d,t) => {
+        setProg(d, t); setStatus(`กำลังบีบ… หน้า ${d}/${t}`);
+      });
+    }
+
+    setStatus("กำลังสร้างไฟล์ PDF…");
+    const outBytes = await buildPdf(imgs);
+    const outSize = outBytes.byteLength;
+
+    // build download
+    const blob = new Blob([outBytes], { type: "application/pdf" });
+    lastUrl = URL.createObjectURL(blob);
+    const dl = $("#dl");
+    dl.href = lastUrl;
+    dl.download = `${pdfName}-compressed.pdf`;
+    dl.classList.remove("hidden");
+
+    // before/after display
+    $("#baBefore").textContent = fmtSize(origBytes);
+    $("#baAfter").textContent = fmtSize(outSize);
+    const pill = $("#baPill");
+    const smaller = outSize < origBytes;
+    const pctSaved = origBytes > 0 ? Math.round((1 - outSize / origBytes) * 100) : 0;
+    $("#ba").classList.add("show");
+    showProg(false);
+
+    const limitMB = parseFloat($("#limitMB").value);
+    if (smaller){
+      pill.className = "pill win";
+      pill.textContent = `🎉 เล็กลง ${pctSaved}%`;
+      if (limitOn && over){
+        setStatus(`⚠️ บีบเล็กที่สุดแล้วได้ ${fmtSize(outSize)} — ยังเกิน ${limitMB} MB (ลองลดจำนวนหน้าหรือเพิ่มลิมิต)`, "warn");
+      } else if (limitOn){
+        setStatus(`✅ บีบสำเร็จ — ไม่เกิน ${limitMB} MB • คุณภาพ ${Math.round(usedQ*100)}% • ความละเอียด ${usedScale}×`, "ok");
+      } else {
+        setStatus(`✅ บีบสำเร็จ — ${PRESETS[preset].label} • คุณภาพ ${Math.round(usedQ*100)}%`, "ok");
+      }
+    } else {
+      // honest: result not smaller (e.g. text PDF rasterized larger, or tiny file)
+      pill.className = "pill lose";
+      pill.textContent = `⚠️ ไม่เล็กลง (โตขึ้น ${Math.abs(pctSaved)}%)`;
+      setStatus("ไฟล์นี้บีบแล้วไม่เล็กลง — PDF ต้นฉบับอาจเป็นข้อความล้วน/บีบมาแล้ว วิธีนี้เหมาะกับไฟล์รูปสแกน", "warn");
+    }
+  } catch (err) {
+    console.error(err);
+    showProg(false);
+    setStatus("บีบไฟล์ไม่สำเร็จ — " + (err && err.message ? err.message : "เกิดข้อผิดพลาด"), "err");
+  } finally {
+    busy = false;
+    $("#go").disabled = !pdfDoc;
+  }
+};
+
+// ---- PWA manifest (embedded, helps "Add to Home Screen") ----
+try{
+  const icon = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><rect width="512" height="512" rx="96" fill="#6366f1"/><text x="50%" y="58%" font-size="240" text-anchor="middle">🗜️</text></svg>`);
+  const mf = {name:"บีบ PDF ให้เล็ก", short_name:"บีบ PDF", start_url:".", display:"standalone",
+    background_color:"#0f172a", theme_color:"#6366f1",
+    icons:[{src:icon, sizes:"512x512", type:"image/svg+xml"}]};
+  const l = document.createElement("link"); l.rel="manifest";
+  l.href = "data:application/manifest+json," + encodeURIComponent(JSON.stringify(mf));
+  document.head.appendChild(l);
+}catch(e){}
+
+// expose for debugging/manual tests + parity with the node harness
+window.JADCOMPRESS = {
+  PRESETS, SCALE_LADDER, PAGE_OVERHEAD,
+  renderPageJpeg, renderAll, buildPdf, fitToTarget, totalBytes,
+  get doc(){ return pdfDoc; },
+};
+</script>
+</body>
+</html>
