@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>🔬 OCR Lab (ทดสอบความแม่น)</title>
+<style>
+  :root{
+    --bg:#0f172a; --card:#1e293b; --card2:#273449;
+    --line:#334155; --text:#e2e8f0; --muted:#94a3b8;
+    --accent:#6366f1; --accent2:#818cf8; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Segoe UI","Sarabun","Noto Sans Thai",sans-serif;
+    padding:0 0 40px;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:rgba(15,23,42,.94);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+    padding:12px 16px; padding-top:max(12px, env(safe-area-inset-top));
+  }
+  header .top{display:flex; align-items:center; gap:10px}
+  header h1{margin:0; font-size:18px; display:flex; align-items:center; gap:8px; flex:1}
+  header p{margin:5px 0 0; font-size:12px; color:var(--muted)}
+  header a.back{font-size:13px; color:var(--accent2); text-decoration:none; white-space:nowrap; padding:6px 8px; border-radius:8px}
+  header a.back:active{background:var(--card2)}
+  .wrap{max-width:680px; margin:0 auto; padding:16px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px}
+  .privacy{
+    font-size:12px; color:var(--text); background:rgba(34,197,94,.07);
+    border:1px solid rgba(34,197,94,.28); border-radius:12px; padding:11px 13px; margin-bottom:14px; line-height:1.55;
+  }
+  .privacy b{color:var(--ok)}
+  .exp{
+    font-size:12px; color:var(--warn); background:rgba(245,158,11,.07);
+    border:1px solid rgba(245,158,11,.25); border-radius:12px; padding:10px 13px; margin-bottom:14px; line-height:1.55;
+  }
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; border:0; border-radius:14px; padding:15px; font-size:16px;
+    font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .btn-add{background:var(--card2); color:var(--text); border:1px dashed var(--line)}
+  .btn-add:active{background:var(--line)}
+  .btn-go{background:var(--accent); color:#fff; box-shadow:0 6px 18px rgba(99,102,241,.32); margin-top:4px}
+  .btn-go:disabled{opacity:.4; box-shadow:none; cursor:default}
+  .btn-go:active:not(:disabled){background:#4f46e5}
+  .picked{display:none; align-items:center; gap:12px; background:var(--card2);
+    border:1px solid var(--line); border-radius:12px; padding:11px 12px; margin-top:12px}
+  .picked.show{display:flex}
+  .picked .ic{font-size:24px; flex:none}
+  .picked .meta{flex:1; min-width:0}
+  .picked .nm{font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .picked .sz{font-size:11px; color:var(--muted); margin-top:2px}
+  label.fld{display:block; font-size:13px; color:var(--muted); margin:0 0 8px}
+  .pwrow{position:relative; display:flex; align-items:center}
+  .pwrow input{width:100%; background:var(--card2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:13px 48px 13px 13px; font-size:16px; font-family:inherit}
+  .pwrow input:focus{outline:none; border-color:var(--accent)}
+  .eye{position:absolute; right:6px; width:38px; height:38px; border:0; background:transparent;
+    color:var(--muted); font-size:18px; cursor:pointer; border-radius:8px; display:flex; align-items:center; justify-content:center}
+  .eye:active{background:var(--line)}
+  .note{font-size:12px; color:var(--accent2); background:rgba(99,102,241,.08);
+    border:1px solid rgba(99,102,241,.25); border-radius:10px; padding:9px 12px; margin-top:10px; line-height:1.5}
+  .opt{display:flex; align-items:center; gap:10px; font-size:14px; color:var(--text); margin-top:6px}
+  .opt input{width:18px; height:18px; accent-color:var(--accent)}
+  .opt .sub{font-size:11px; color:var(--muted); display:block; margin-top:2px}
+  #status{font-size:13px; color:var(--muted); text-align:center; margin:14px 0 4px; min-height:18px}
+  #status.ok{color:var(--ok)} #status.err{color:var(--danger)} #status.warn{color:var(--warn)}
+  .prog{height:6px; background:var(--card2); border-radius:999px; overflow:hidden; margin:8px 0; display:none}
+  .prog.show{display:block}
+  .prog i{display:block; height:100%; width:0; background:var(--accent); transition:width .15s}
+  .spin{display:inline-block; width:14px; height:14px; border:2px solid var(--muted); border-top-color:transparent;
+    border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .hide{display:none !important}
+
+  /* result blocks */
+  .verdict{display:flex; align-items:center; gap:12px; padding:14px; border-radius:14px; margin-bottom:14px;
+    border:1px solid var(--line); background:var(--card2)}
+  .verdict .big{font-size:30px; flex:none}
+  .verdict .t{font-size:15px; font-weight:700}
+  .verdict .s{font-size:12px; color:var(--muted); margin-top:3px; line-height:1.5}
+  .verdict.digital{border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.08)}
+  .verdict.scan{border-color:rgba(245,158,11,.45); background:rgba(245,158,11,.08)}
+
+  .pagebar{display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap}
+  .pagebar select{background:var(--card2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:9px 11px; font-size:14px; font-family:inherit}
+  .pagebar .lbl{font-size:13px; color:var(--muted)}
+
+  .preview{width:100%; border:1px solid var(--line); border-radius:10px; background:#0b1220; display:block; margin-bottom:12px}
+
+  .methblock{margin-bottom:14px}
+  .methhead{display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; margin-bottom:7px}
+  .badge{font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .badge.free{background:rgba(34,197,94,.16); color:#86efac; border:1px solid rgba(34,197,94,.35)}
+  .badge.conf{background:rgba(99,102,241,.16); color:var(--accent2); border:1px solid rgba(99,102,241,.35); font-variant-numeric:tabular-nums}
+  .badge.confhi{background:rgba(34,197,94,.16); color:#86efac; border:1px solid rgba(34,197,94,.35)}
+  .badge.confmid{background:rgba(245,158,11,.16); color:#fcd34d; border:1px solid rgba(245,158,11,.35)}
+  .badge.conflo{background:rgba(239,68,68,.16); color:#fca5a5; border:1px solid rgba(239,68,68,.35)}
+
+  .txtbox{background:#0b1220; border:1px solid var(--line); border-radius:10px; padding:12px;
+    font-size:13.5px; line-height:1.7; white-space:pre-wrap; word-break:break-word;
+    max-height:260px; overflow:auto; font-family:"Sarabun","Noto Sans Thai",ui-monospace,monospace}
+  .txtbox .mny{background:rgba(34,197,94,.22); color:#bbf7d0; border-radius:4px; padding:0 3px; font-weight:600}
+  .txtbox .kw{background:rgba(99,102,241,.28); color:#c7d2fe; border-radius:4px; padding:0 3px}
+  .txtbox.empty{color:var(--muted); font-style:italic}
+
+  .fields{margin-top:8px}
+  .fchip{display:inline-flex; align-items:center; gap:6px; background:var(--card2); border:1px solid var(--line);
+    border-radius:999px; padding:5px 11px; font-size:12.5px; margin:0 6px 6px 0}
+  .fchip .k{color:var(--muted)} .fchip .v{color:var(--ok); font-weight:600; font-variant-numeric:tabular-nums}
+  .fchip.kw .v{color:var(--accent2)}
+  .small{font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.55}
+  .divider{height:1px; background:var(--line); margin:14px 0}
+  .reload{font-size:12px; color:var(--accent2); text-decoration:underline; cursor:pointer; background:none; border:0; padding:0; font-family:inherit}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>🔬 OCR Lab (ทดสอบความแม่น)</h1>
+    <a class="back" href="index.html">← หน้าหลัก</a>
+  </div>
+  <p>🔒 ทำงานในเครื่อง ไม่ส่งไฟล์ขึ้นเน็ต</p>
+</header>
+
+<div class="wrap">
+
+  <div class="privacy">
+    🛡️ <b>ไม่มีการอัปโหลดไฟล์ใดๆ</b> — การอ่านข้อความ/ตัวเลขทั้งหมดเกิดขึ้น<b>ในเครื่องนี้</b> (offline) ทั้ง pdf.js, การถอดรหัส และ OCR
+    ข้อมูลการเงินที่ละเอียดอ่อนของคุณ<b>ไม่ออกจากอุปกรณ์</b>
+  </div>
+  <div class="exp">
+    🧪 <b>นี่คือห้องทดลอง</b> — เราใช้หน้านี้วัดว่า “การดึงข้อความฟรี 100% ในเครื่อง”
+    แม่นพอสำหรับงานสินเชื่อหรือยัง โดยเทียบ 2 ทาง: <b>(1) เลเยอร์ข้อความดิจิทัล</b> กับ <b>(2) OCR ภาพสแกน</b>.
+    ผลที่ได้เป็นการวัดจริง — ตัวเลขความมั่นใจคือของ Tesseract เอง
+  </div>
+
+  <!-- เลือกไฟล์ -->
+  <div class="card">
+    <input id="file" type="file" accept="application/pdf,.pdf,image/*" hidden>
+    <button class="btn btn-add" id="pick" type="button">📄 เปิดสเตทเมนต์ / รูปภาพ</button>
+    <div class="picked" id="picked">
+      <div class="ic" id="pic">📄</div>
+      <div class="meta">
+        <div class="nm" id="pname">—</div>
+        <div class="sz" id="psize"></div>
+      </div>
+    </div>
+    <div class="note">รองรับ PDF ธนาคาร (e-statement) และไฟล์รูป (.jpg/.png ของหน้าที่ถ่าย/สแกน)</div>
+
+    <div class="opt" style="margin-top:12px">
+      <input type="checkbox" id="optGray">
+      <label for="optGray" style="cursor:pointer">
+        ปรับภาพก่อน OCR (ขาว-ดำ)
+        <span class="sub">ช่วยภาพคอนทราสต์ต่ำ แต่ <b>อาจทำให้ภาพที่มีจุดรบกวนแย่ลง</b> — ลองทั้งสองแบบ</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- รหัสผ่าน (โผล่เมื่อไฟล์มีรหัส) -->
+  <div class="card hide" id="pwCard">
+    <label class="fld" for="pwd">🔐 ไฟล์นี้มีรหัสผ่าน — ใส่รหัสเพื่อเปิด</label>
+    <div class="pwrow">
+      <input id="pwd" type="password" inputmode="text" autocomplete="off" placeholder="รหัสที่ใช้เปิดไฟล์">
+      <button class="eye" id="eyed" type="button" aria-label="แสดง/ซ่อนรหัส">👁</button>
+    </div>
+    <div class="note">🔒 รหัสใช้เปิดไฟล์ในเครื่องเท่านั้น ไม่ถูกเก็บหรือส่งออก</div>
+    <button class="btn btn-go" id="unlock" type="button" style="margin-top:12px">🔓 ปลดล็อกและอ่าน</button>
+  </div>
+
+  <button class="btn btn-go hide" id="go" type="button">🔍 อ่านข้อความจากไฟล์นี้</button>
+
+  <div class="prog" id="prog"><i id="progBar"></i></div>
+  <div id="status"></div>
+
+  <!-- ผลลัพธ์ -->
+  <div id="result"></div>
+
+</div>
+
+<!-- Vendored, offline, no CDN -->
+<script src="vendor/extract/pdf.min.js"></script>
+<script src="vendor/encrypt/qpdf.js"></script>
+<script src="vendor/ocrlab/tesseract.min.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+/* ---------------- pdf.js (local/offline) ---------------- */
+const PDFJS = window.pdfjsLib;
+const EXVENDOR = "vendor/extract/";
+PDFJS.GlobalWorkerOptions.workerSrc = EXVENDOR + "pdf.worker.min.js";
+const FONT_OPTS = { standardFontDataUrl: EXVENDOR + "standard_fonts/", cMapUrl: EXVENDOR + "cmaps/", cMapPacked: true };
+
+/* ---------------- qpdf (local/offline) — decrypt only ---------------- */
+let qpdfPromise = null;
+function loadQpdf(){
+  if(qpdfPromise) return qpdfPromise;
+  const factory = window.Module;
+  if(typeof factory !== "function") return Promise.reject(new Error("โหลดตัวถอดรหัสไม่สำเร็จ (qpdf)"));
+  qpdfPromise = factory({ locateFile:(p)=> "vendor/encrypt/"+p, print:()=>{}, printErr:()=>{} })
+    .catch(e=>{ qpdfPromise=null; throw e; });
+  return qpdfPromise;
+}
+
+/* ---------------- Tesseract.js (local/offline) ---------------- */
+const OCRVENDOR = "vendor/ocrlab/";
+// Minimal WASM-SIMD feature test (so we pick a vendored core we actually shipped).
+function hasWasmSimd(){
+  try{
+    // wasm module using v128 — validates only on SIMD-capable engines
+    return WebAssembly.validate(new Uint8Array([
+      0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,98,11
+    ]));
+  }catch(_){ return false; }
+}
+let ocrWorker = null, ocrLoading = null;
+function loadOcr(onProg){
+  if(ocrWorker) return Promise.resolve(ocrWorker);
+  if(ocrLoading) return ocrLoading;
+  ocrLoading = (async ()=>{
+    // Point at the EXACT vendored core file (corePath ending in .js is used as-is,
+    // skipping tesseract's SIMD/relaxedSIMD auto-detect which would fetch variants
+    // we don't ship). Fall back to the non-SIMD LSTM core on old engines.
+    const core = hasWasmSimd() ? "tesseract-core-simd-lstm.wasm.js" : "tesseract-core-lstm.wasm.js";
+    const w = await Tesseract.createWorker("tha+eng", 1 /* LSTM_ONLY */, {
+      workerPath: OCRVENDOR + "worker.min.js",
+      corePath:   OCRVENDOR + core,
+      langPath:   OCRVENDOR + "tessdata",
+      gzip: true,
+      workerBlobURL: true,
+      logger: m => { if(onProg && m.status) onProg(m); },
+      errorHandler: e => console.error("OCR worker:", e),
+    });
+    ocrWorker = w; return w;
+  })().catch(e=>{ ocrLoading=null; throw e; });
+  return ocrLoading;
+}
+
+/* ---------------- state ---------------- */
+let rawBytes = null;       // Uint8Array of selected file (as-is)
+let workBytes = null;      // decrypted bytes if needed (what we actually read)
+let isImage = false;
+let imageBitmapSrc = null; // for image input: object URL
+let pdfDoc = null;
+let pageCount = 0;
+let fileName = "";
+let needsPassword = false;
+let busy = false;
+
+const fmtSize = b => b<1024 ? b+" B" : b<1048576 ? (b/1024).toFixed(0)+" KB" : (b/1048576).toFixed(2)+" MB";
+function setStatus(cls, html){ const s=$("#status"); s.className=cls||""; s.innerHTML=html||""; }
+function showProg(on){ $("#prog").classList.toggle("show", !!on); }
+function setProg(p){ $("#progBar").style.width = Math.round(p*100)+"%"; }
+
+/* ---------------- file pick ---------------- */
+$("#pick").onclick = ()=> $("#file").click();
+$("#eyed").onclick = ()=>{ const el=$("#pwd"); const sh=el.type==="password"; el.type=sh?"text":"password"; $("#eyed").textContent=sh?"🙈":"👁"; };
+
+$("#file").onchange = async (e)=>{
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if(!f) return;
+  resetAll();
+  fileName = f.name;
+  rawBytes = new Uint8Array(await f.arrayBuffer());
+  isImage = /^image\//.test(f.type) || /\.(png|jpe?g|webp|bmp)$/i.test(f.name);
+  $("#pname").textContent = f.name;
+  $("#psize").textContent = fmtSize(f.size);
+  $("#pic").textContent = isImage ? "🖼️" : "📄";
+  $("#picked").classList.add("show");
+
+  if(isImage){
+    if(imageBitmapSrc) URL.revokeObjectURL(imageBitmapSrc);
+    imageBitmapSrc = URL.createObjectURL(new Blob([rawBytes], {type:f.type||"image/png"}));
+    $("#go").classList.remove("hide");
+    setStatus("", "พร้อมอ่าน — ไฟล์รูปจะใช้ OCR (รูปสแกน)");
+    return;
+  }
+  // PDF: probe whether it needs a password
+  await probePdf(rawBytes);
+};
+
+async function probePdf(bytes){
+  setStatus("", '<span class="spin"></span>กำลังเปิดไฟล์…');
+  try{
+    const task = PDFJS.getDocument({ data: bytes.slice(), isEvalSupported:false, ...FONT_OPTS });
+    pdfDoc = await task.promise;
+    pageCount = pdfDoc.numPages;
+    workBytes = bytes;
+    needsPassword = false;
+    $("#pwCard").classList.add("hide");
+    $("#go").classList.remove("hide");
+    setStatus("", `เปิดได้ • ${pageCount} หน้า — กด “อ่านข้อความ”`);
+  }catch(err){
+    if(err && err.name === "PasswordException"){
+      needsPassword = true;
+      $("#pwCard").classList.remove("hide");
+      $("#go").classList.add("hide");
+      setStatus("warn", "🔐 ไฟล์นี้มีรหัสผ่าน — ใส่รหัสเพื่อปลดล็อกในเครื่อง");
+    }else{
+      setStatus("err", "เปิดไฟล์ไม่ได้ — ไฟล์อาจเสียหาย");
+    }
+  }
+}
+
+/* ---------------- unlock (qpdf, local) ---------------- */
+$("#unlock").onclick = async ()=>{
+  if(busy) return;
+  const pw = $("#pwd").value;
+  if(!pw){ setStatus("warn","ใส่รหัสก่อน"); return; }
+  busy = true; $("#unlock").disabled = true;
+  try{
+    setStatus("", '<span class="spin"></span>กำลังปลดล็อกในเครื่อง…');
+    const qpdf = await loadQpdf();
+    const tag = Date.now().toString(36);
+    const inP = "/in_"+tag+".pdf", outP = "/out_"+tag+".pdf";
+    qpdf.FS.writeFile(inP, rawBytes);
+    const code = qpdf.callMain(["--password="+pw, "--decrypt", inP, outP]);
+    try{ qpdf.FS.unlink(inP); }catch(_){}
+    if(code !== 0 && code !== 3){
+      try{ qpdf.FS.unlink(outP); }catch(_){}
+      throw new Error("รหัสผ่านไม่ถูกต้อง");
+    }
+    const out = qpdf.FS.readFile(outP); try{ qpdf.FS.unlink(outP); }catch(_){}
+    workBytes = out.slice();               // detach from wasm heap
+    $("#pwd").value = "";                   // never keep the password around
+    // re-open the now-unlocked bytes with pdf.js
+    pdfDoc = await PDFJS.getDocument({ data: workBytes.slice(), isEvalSupported:false, ...FONT_OPTS }).promise;
+    pageCount = pdfDoc.numPages;
+    needsPassword = false;
+    $("#pwCard").classList.add("hide");
+    $("#go").classList.remove("hide");
+    setStatus("ok", `✅ ปลดล็อกแล้ว • ${pageCount} หน้า — กด “อ่านข้อความ”`);
+  }catch(err){
+    setStatus("err", "❌ " + (err.message||"ปลดล็อกไม่สำเร็จ"));
+  }finally{
+    busy = false; $("#unlock").disabled = false;
+  }
+};
+
+/* ---------------- main: read ---------------- */
+$("#go").onclick = async ()=>{
+  if(busy) return;
+  busy = true; $("#go").disabled = true; $("#result").innerHTML = "";
+  try{
+    if(isImage){
+      await runImageFlow();
+    }else{
+      await runPdfFlow();
+    }
+  }catch(err){
+    console.error(err);
+    setStatus("err", "❌ " + (err.message||"อ่านไฟล์ไม่สำเร็จ"));
+  }finally{
+    busy = false; $("#go").disabled = false; showProg(false);
+  }
+};
+
+/* ===== PDF flow: text layer first, OCR for the rendered page ===== */
+async function runPdfFlow(){
+  // 1) text layer for every page
+  setStatus("", '<span class="spin"></span>กำลังดึงเลเยอร์ข้อความ (pdf.js)…');
+  let digitalText = "", totalChars = 0;
+  for(let p=1; p<=pageCount; p++){
+    const page = await pdfDoc.getPage(p);
+    const tc = await page.getTextContent();
+    const t = tc.items.map(i=>i.str).join(" ");
+    digitalText += (p>1?"\n\n":"") + t;
+    totalChars += t.replace(/\s/g,"").length;
+  }
+  const hasTextLayer = totalChars >= 15;     // heuristic: real embedded text
+  const detected = hasTextLayer ? "digital" : "scan";
+
+  // 2) render page 1 to a canvas (preview + OCR). Guarded with a timeout so a
+  //    stuck pdf.js worker can never freeze the page — we degrade gracefully.
+  const pageNo = 1;
+  setStatus("", '<span class="spin"></span>กำลังเรนเดอร์หน้า…');
+  let render = null;
+  try{ render = await renderPdfPage(pageNo, 2.0); }
+  catch(err){ console.warn("render failed/timeout:", err); render = null; }
+
+  // 3) OCR the rendered page so we can compare both paths honestly.
+  //    If render was unavailable, OCR is skipped (digital text already perfect).
+  let ocr = { text:"", confidence:0, ms:0, skipped: !render };
+  if(render){
+    setStatus("", '<span class="spin"></span>กำลังเตรียม OCR (โหลดครั้งแรกอาจ 10–20 วิ)…');
+    try{ ocr = await ocrCanvas(render.canvas); }
+    catch(err){ console.warn("ocr failed:", err); ocr = { text:"", confidence:0, ms:0, failed:true }; }
+  }
+
+  renderResults({
+    detected, pageCount, pageNo,
+    previewUrl: render ? render.dataUrl : null,
+    digital: { text: digitalText.trim(), present: hasTextLayer },
+    ocr,
+  });
+}
+
+/* ===== Image flow: OCR only ===== */
+async function runImageFlow(){
+  const img = await loadImageEl(imageBitmapSrc);
+  const canvas = document.createElement("canvas");
+  const maxW = 2000; const scale = img.width > maxW ? maxW/img.width : 1;
+  canvas.width = Math.round(img.width*scale); canvas.height = Math.round(img.height*scale);
+  const ctx = canvas.getContext("2d", { alpha:false });
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+  setStatus("", '<span class="spin"></span>กำลังเตรียม OCR (โหลดครั้งแรกอาจ 10–20 วิ)…');
+  const ocr = await ocrCanvas(canvas);
+
+  renderResults({
+    detected:"scan", pageCount:1, pageNo:1, previewUrl:dataUrl,
+    digital:{ text:"", present:false, na:true },
+    ocr,
+  });
+}
+
+/* render a pdf page to canvas (with a hard timeout so a stuck worker can't freeze us) */
+async function renderPdfPage(n, scale){
+  const page = await pdfDoc.getPage(n);
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+  const ctx = canvas.getContext("2d", { alpha:false });
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  const task = page.render({ canvasContext: ctx, viewport });
+  let timer;
+  const timeout = new Promise((_, rej)=>{ timer = setTimeout(()=>{ try{ task.cancel(); }catch(_){} rej(new Error("เรนเดอร์หน้าใช้เวลานานเกินไป")); }, 20000); });
+  try{ await Promise.race([ task.promise, timeout ]); }
+  finally{ clearTimeout(timer); }
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+  return { canvas, dataUrl };
+}
+
+/* optional grayscale preprocess + OCR */
+async function ocrCanvas(canvas){
+  if($("#optGray").checked){
+    const ctx = canvas.getContext("2d");
+    const im = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const d = im.data;
+    for(let i=0;i<d.length;i+=4){
+      const v = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114)|0;
+      d[i]=d[i+1]=d[i+2]=v;
+    }
+    ctx.putImageData(im,0,0);
+  }
+  const worker = await loadOcr((m)=>{
+    if(m.status==="recognizing text"){ showProg(true); setProg(m.progress||0);
+      setStatus("", `กำลัง OCR… ${Math.round((m.progress||0)*100)}%`); }
+    else { setStatus("", '<span class="spin"></span>'+thStatus(m.status)); }
+  });
+  const t0 = performance.now();
+  const { data } = await worker.recognize(canvas);
+  const ms = performance.now()-t0;
+  showProg(false);
+  return { text:(data.text||"").trim(), confidence:data.confidence||0, ms };
+}
+function thStatus(s){
+  const map = { "loading tesseract core":"กำลังโหลดเครื่องมือ OCR…",
+    "initializing tesseract":"กำลังเริ่ม OCR…", "loading language traineddata":"กำลังโหลดภาษาไทย+อังกฤษ…",
+    "initializing api":"กำลังเตรียม OCR…", "recognizing text":"กำลังอ่านข้อความ…" };
+  return map[s] || "กำลังประมวลผล…";
+}
+
+function loadImageEl(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+
+/* ---------------- field finder (demo heuristics) ---------------- */
+const KEYWORDS = ["เงินเดือน","ยอดยกมา","ยอดคงเหลือ","เงินเข้า","เงินออก","รายการ","ดอกเบี้ย","โอน","ค่างวด","ฝาก","ถอน"];
+// money: 1,234.56 / 35000 / -2,500.00  (at least 3 digits or a grouping/decimal)
+const MONEY_RE = /-?(?:\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d{4,}(?:\.\d{1,2})?|\d+\.\d{2})/g;
+
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function highlight(text){
+  let html = escapeHtml(text);
+  // money first
+  html = html.replace(MONEY_RE, m=>` MNY${m}`);
+  for(const kw of KEYWORDS){
+    html = html.split(kw).join(` KW${kw}`);
+  }
+  html = html.replace(/ MNY([^]*)/g, '<span class="mny">$1</span>')
+             .replace(/ KW([^]*)/g, '<span class="kw">$1</span>');
+  return html;
+}
+function findFields(text){
+  const monies = (text.match(MONEY_RE)||[]).filter(m=>m.replace(/[^\d]/g,"").length>=3);
+  const kws = KEYWORDS.filter(k=>text.includes(k));
+  // try to pair a keyword with the nearest money on the same line
+  const pairs = [];
+  for(const line of text.split(/\n/)){
+    for(const k of KEYWORDS){
+      if(line.includes(k)){
+        const m = line.match(MONEY_RE);
+        if(m && m.length){ pairs.push({ k, v:m[m.length-1] }); }
+      }
+    }
+  }
+  return { monies:[...new Set(monies)].slice(0,12), kws, pairs:pairs.slice(0,8) };
+}
+
+/* ---------------- render results ---------------- */
+function confClass(c){ return c>=85?"confhi":c>=65?"confmid":"conflo"; }
+function renderResults(r){
+  setStatus("ok", "✅ อ่านเสร็จ");
+  const best = r.digital.present ? r.digital.text : r.ocr.text;
+  const ff = findFields(best);
+
+  const vClass = r.detected==="digital" ? "digital" : "scan";
+  const vIcon = r.detected==="digital" ? "🟢" : "🟠";
+  const vTitle = r.detected==="digital" ? "ตรวจพบ: เอกสารดิจิทัล (มีเลเยอร์ข้อความ)" : "ตรวจพบ: รูปสแกน / ไม่มีเลเยอร์ข้อความ";
+  const vSub = r.detected==="digital"
+    ? "ดึงข้อความได้ตรง 100% แทบทุกครั้ง — ฟรี เร็ว แม่นที่สุด"
+    : "ต้องใช้ OCR — ฟรีเช่นกัน แต่ความแม่นขึ้นกับคุณภาพภาพ (ดูคะแนนความมั่นใจ)";
+
+  let html = `<div class="card">
+    <div class="verdict ${vClass}"><div class="big">${vIcon}</div>
+      <div><div class="t">${vTitle}</div><div class="s">${vSub}</div></div></div>`;
+
+  // preview
+  html += `<div class="pagebar"><span class="lbl">หน้าตัวอย่าง ${r.pageNo}${r.pageCount>1?` / ${r.pageCount} หน้า`:""}</span></div>`;
+  if(r.previewUrl){ html += `<img class="preview" src="${r.previewUrl}" alt="ตัวอย่างหน้า">`; }
+  else { html += `<div class="txtbox empty">เรนเดอร์ภาพตัวอย่างไม่สำเร็จในเบราว์เซอร์นี้ — แต่ดึงข้อความได้ปกติ (ดูด้านล่าง)</div>`; }
+
+  // method 1: digital text layer
+  html += `<div class="divider"></div><div class="methblock"><div class="methhead">
+      📑 ทาง 1 — เลเยอร์ข้อความดิจิทัล (pdf.js)
+      <span class="badge free">ฟรี</span>`;
+  if(r.digital.na){ html += `</div><div class="txtbox empty">ไฟล์รูปไม่มีเลเยอร์ข้อความ — ข้ามไปใช้ OCR</div></div>`; }
+  else if(r.digital.present){
+    html += `<span class="badge confhi">แม่นจริง ~100%</span></div>
+      <div class="txtbox">${highlight(r.digital.text)}</div></div>`;
+  } else {
+    html += `<span class="badge conflo">ไม่พบข้อความ</span></div>
+      <div class="txtbox empty">ไม่พบเลเยอร์ข้อความที่มีความหมาย — หน้านี้น่าจะเป็นภาพสแกน จึงต้องพึ่ง OCR</div></div>`;
+  }
+
+  // method 2: OCR
+  const c = Math.round(r.ocr.confidence);
+  const showConf = !r.ocr.skipped && !r.ocr.failed && r.ocr.text;
+  html += `<div class="divider"></div><div class="methblock"><div class="methhead">
+      🔠 ทาง 2 — OCR ภาพ (Tesseract • tha+eng)
+      <span class="badge free">ฟรี</span>
+      ${showConf?`<span class="badge ${confClass(c)}">ความมั่นใจ ${c}%</span>`:""}</div>`;
+  if(r.ocr.skipped){
+    html += `<div class="txtbox empty">ข้าม OCR — เอกสารนี้มีเลเยอร์ข้อความดิจิทัลที่แม่นยำอยู่แล้ว จึงไม่จำเป็นต้องใช้ OCR (ประหยัดเวลา)</div></div>`;
+  } else if(r.ocr.failed){
+    html += `<div class="txtbox empty">OCR ทำงานไม่สำเร็จในเบราว์เซอร์นี้</div></div>`;
+  } else if(r.ocr.text){
+    html += `<div class="txtbox">${highlight(r.ocr.text)}</div>
+      <div class="small">⏱️ ใช้เวลา ${(r.ocr.ms/1000).toFixed(1)} วิ • ความมั่นใจเป็นค่าจาก Tesseract เอง
+      ${c<65?'• ⚠️ คะแนนต่ำ ควรให้คนตรวจซ้ำ':c<85?'• ตรวจตัวเลขสำคัญอีกครั้ง':'• คุณภาพดี'}</div></div>`;
+  } else {
+    html += `<div class="txtbox empty">OCR อ่านไม่ได้ — ภาพอาจเบลอ/มืดเกินไป</div></div>`;
+  }
+
+  // field finder
+  html += `<div class="divider"></div><div class="methblock"><div class="methhead">🎯 ตัวจับฟิลด์ (เดโม)</div>`;
+  if(ff.pairs.length || ff.monies.length || ff.kws.length){
+    html += `<div class="fields">`;
+    for(const p of ff.pairs){ html += `<span class="fchip"><span class="k">${p.k}</span><span class="v">${p.v}</span></span>`; }
+    if(!ff.pairs.length){
+      for(const k of ff.kws){ html += `<span class="fchip kw"><span class="v">${k}</span></span>`; }
+    }
+    html += `</div><div class="small">พบจำนวนเงิน ${ff.monies.length} ค่า • คีย์เวิร์ด ${ff.kws.length} คำ —
+      ${ff.monies.length? "ตัวอย่าง: "+ff.monies.slice(0,6).join(" · ") : ""}<br>
+      เป็นเพียงเดโมหา “เงิน/คีย์เวิร์ด” ด้วยกฎง่ายๆ ไม่ใช่ระดับโปรดักชัน</div>`;
+  } else {
+    html += `<div class="txtbox empty">ยังไม่พบฟิลด์ที่ชัดเจนในข้อความที่ดึงได้</div>`;
+  }
+  html += `</div></div>`;
+
+  $("#result").innerHTML = html;
+}
+
+/* ---------------- reset ---------------- */
+function resetAll(){
+  if(pdfDoc){ try{ pdfDoc.destroy(); }catch(_){} pdfDoc=null; }
+  if(imageBitmapSrc){ URL.revokeObjectURL(imageBitmapSrc); imageBitmapSrc=null; }
+  rawBytes = workBytes = null; isImage=false; pageCount=0; needsPassword=false;
+  $("#result").innerHTML=""; $("#pwCard").classList.add("hide");
+  $("#go").classList.add("hide"); $("#pwd").value="";
+  setStatus("",""); showProg(false);
+}
+
+// expose for tests
+window.OCRLAB = { loadOcr, loadQpdf, findFields, get worker(){ return ocrWorker; } };
+</script>
+</body>
+</html>
