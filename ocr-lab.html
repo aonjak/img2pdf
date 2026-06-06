@@ -120,6 +120,9 @@
   .small{font-size:11.5px; color:var(--muted); margin-top:8px; line-height:1.55}
   .divider{height:1px; background:var(--line); margin:14px 0}
   .reload{font-size:12px; color:var(--accent2); text-decoration:underline; cursor:pointer; background:none; border:0; padding:0; font-family:inherit}
+  .btn-copy{background:var(--card2); color:var(--accent2); border:1px solid var(--accent); margin-top:4px}
+  .btn-copy:active{background:var(--line)}
+  .btn-copy.copied{background:rgba(34,197,94,.15); color:var(--ok); border-color:var(--ok)}
 </style>
 </head>
 <body>
@@ -271,6 +274,7 @@ $("#file").onchange = async (e)=>{
   if(!f) return;
   resetAll();
   fileName = f.name;
+  lastFileSize = f.size;
   rawBytes = new Uint8Array(await f.arrayBuffer());
   isImage = /^image\//.test(f.type) || /\.(png|jpe?g|webp|bmp)$/i.test(f.name);
   $("#pname").textContent = f.name;
@@ -475,6 +479,10 @@ function thStatus(s){
 
 function loadImageEl(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
 
+/* ---------------- last result store (for copy-summary) ---------------- */
+let lastResult = null;
+let lastFileSize = 0;
+
 /* ---------------- field finder (demo heuristics) ---------------- */
 const KEYWORDS = ["เงินเดือน","ยอดยกมา","ยอดคงเหลือ","เงินเข้า","เงินออก","รายการ","ดอกเบี้ย","โอน","ค่างวด","ฝาก","ถอน"];
 // money: 1,234.56 / 35000 / -2,500.00  (at least 3 digits or a grouping/decimal)
@@ -511,6 +519,7 @@ function findFields(text){
 /* ---------------- render results ---------------- */
 function confClass(c){ return c>=85?"confhi":c>=65?"confmid":"conflo"; }
 function renderResults(r){
+  lastResult = r;
   setStatus("ok", "✅ อ่านเสร็จ");
   const best = r.digital.present ? r.digital.text : r.ocr.text;
   const ff = findFields(best);
@@ -577,9 +586,102 @@ function renderResults(r){
   } else {
     html += `<div class="txtbox empty">ยังไม่พบฟิลด์ที่ชัดเจนในข้อความที่ดึงได้</div>`;
   }
-  html += `</div></div>`;
+  html += `</div>
+    <div class="divider"></div>
+    <button class="btn btn-copy" id="btnCopySummary" type="button" onclick="copySummary()">📋 คัดลอกสรุปให้ AI</button>
+  </div>`;
 
   $("#result").innerHTML = html;
+}
+
+/* ---------------- copy summary for AI ---------------- */
+function copySummary(){
+  if(!lastResult) return;
+  const r = lastResult;
+
+  // file type label
+  const typeLabel = r.detected==="digital" ? "digital PDF" : r.digital && r.digital.na ? "scanned image" : "mixed / scan";
+
+  // file size
+  const sizeStr = lastFileSize < 1048576
+    ? (lastFileSize/1024).toFixed(0)+" KB"
+    : (lastFileSize/1048576).toFixed(2)+" MB";
+
+  // path 1 — digital text layer
+  const digPresent = r.digital && r.digital.present;
+  const digStatus = r.digital && r.digital.na ? "ไม่มีเลเยอร์ (ไฟล์รูป)" : digPresent ? "พบ text layer" : "ไม่พบ";
+  const digLen = r.digital && r.digital.text ? r.digital.text.length : 0;
+  const digNonSpace = r.digital && r.digital.text ? r.digital.text.replace(/\s/g,"").length : 0;
+  const digAvgPerPage = r.pageCount ? Math.round(digNonSpace / r.pageCount) : 0;
+
+  // path 2 — OCR
+  const ocrConf = r.ocr && !r.ocr.skipped && !r.ocr.failed ? Math.round(r.ocr.confidence) : null;
+  const ocrSkipped = r.ocr && r.ocr.skipped;
+  const ocrFailed = r.ocr && r.ocr.failed;
+  let ocrConfStr = ocrSkipped ? "ข้าม (มี digital layer)" : ocrFailed ? "ทำงานไม่สำเร็จ" : (ocrConf !== null ? ocrConf+"%" : "N/A");
+
+  // low-confidence word count (heuristic: conf<60 on OCR text split by spaces)
+  // Tesseract bulk confidence only, so we estimate from overall confidence
+  let lowConfWords = "N/A";
+  if(ocrConf !== null && r.ocr.text){
+    // rough estimate: words proportional to (1 - conf/100) * word_count
+    const wordCount = r.ocr.text.trim().split(/\s+/).filter(w=>w).length;
+    lowConfWords = Math.round(wordCount * Math.max(0, (100-ocrConf)/100));
+  }
+
+  // field finder — use digital if present, else OCR
+  const best = (r.digital && r.digital.present) ? r.digital.text : (r.ocr && r.ocr.text ? r.ocr.text : "");
+  const ff = best ? findFields(best) : { monies:[], kws:[], pairs:[] };
+  const topAmounts = ff.monies.slice(0,10).join(", ") || "—";
+  const keywords = ff.kws.join(", ") || "—";
+
+  const summary = [
+    "=== OCR Lab สรุป ===",
+    `ประเภทไฟล์: ${typeLabel}`,
+    `จำนวนหน้า: ${r.pageCount}`,
+    `ขนาดไฟล์: ${sizeStr}`,
+    "",
+    "ทาง 1 — เลเยอร์ข้อความดิจิทัล (pdf.js)",
+    `สถานะ: ${digStatus}`,
+    `จำนวนตัวอักษรที่ดึงได้: ${digLen}`,
+    `ความยาวข้อความเฉลี่ยต่อหน้า: ${digAvgPerPage} chars`,
+    "",
+    "ทาง 2 — OCR ภาพ (Tesseract • tha+eng)",
+    `ความมั่นใจเฉลี่ย: ${ocrConfStr}`,
+    `จำนวนคำที่ confidence < 60: ${lowConfWords}`,
+    "",
+    "ตัวจับฟิลด์ (จากทาง 1 ถ้ามี ไม่งั้น ทาง 2):",
+    `- พบเลขจำนวนเงิน: ${ff.monies.length} รายการ`,
+    `- ตัวอย่าง (10 รายการสูงสุด): ${topAmounts}`,
+    `- คีย์เวิร์ดที่เจอ: ${keywords}`,
+    "",
+    "หมายเหตุ: ข้อความส่วนตัว/ชื่อ/เลขบัญชี ถูกตัดออกแล้ว ส่งได้ปลอดภัย",
+  ].join("\n");
+
+  function showCopied(){
+    const btn = $("#btnCopySummary");
+    if(!btn) return;
+    const orig = btn.innerHTML;
+    btn.innerHTML = "✅ คัดลอกแล้ว";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.innerHTML = orig; btn.classList.remove("copied"); }, 2000);
+  }
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(summary).then(showCopied).catch(()=> fallbackCopy(summary, showCopied));
+  } else {
+    fallbackCopy(summary, showCopied);
+  }
+}
+
+function fallbackCopy(text, cb){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try{ document.execCommand("copy"); cb && cb(); }catch(_){}
+  document.body.removeChild(ta);
 }
 
 /* ---------------- reset ---------------- */
